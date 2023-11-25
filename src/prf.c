@@ -21,7 +21,7 @@ EVP_CIPHER_CTX *PRFKeyGen(uint8_t *key)
     return ctx;
 }
 
-void destroyPRFKey(EVP_CIPHER_CTX *ctx)
+void DestroyPRFKey(EVP_CIPHER_CTX *ctx)
 {
     EVP_CIPHER_CTX_free(ctx);
 }

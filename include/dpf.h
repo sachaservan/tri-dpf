@@ -13,17 +13,8 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
-#define FIELDSIZE 2
-#define FIELDBITS 1
-
-#define FIELDMASK ((1L << FIELDBITS) - 1)
-
 typedef __int128 int128_t;
 typedef unsigned __int128 uint128_t;
-
-// PRG cipher context
-extern EVP_CIPHER_CTX *getDPFContext(uint8_t *);
-extern void destroyContext(EVP_CIPHER_CTX *);
 
 extern void DPFGen(EVP_CIPHER_CTX *prfKey0,
                    EVP_CIPHER_CTX *prfKey1,
@@ -33,7 +24,7 @@ extern void DPFGen(EVP_CIPHER_CTX *prfKey0,
                    unsigned char *k0,
                    unsigned char *k1);
 
-void DPFFullDomainEval(
+extern void DPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
     EVP_CIPHER_CTX *prfKey2,
