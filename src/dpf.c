@@ -234,11 +234,15 @@ void DPFFullDomainEval(
 	idx1 = num_nodes;
 	idx2 = two_num_nodes;
 	i = 0;
-	for (; i < num_nodes; i += 3)
+	for (; i < num_nodes; i++)
 	{
 		out[idx0] = parents[idx0];
 		out[idx1] = parents[idx1];
 		out[idx2] = parents[idx2];
+
+		idx0++;
+		idx1++;
+		idx2++;
 	}
 
 	free(parents);
