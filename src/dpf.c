@@ -205,18 +205,9 @@ void DPFFullDomainEval(
 	num_nodes = num_nodes / 3;
 	two_num_nodes = 2 * num_nodes;
 
-	idx0 = 0;
-	idx1 = num_nodes;
-	idx2 = two_num_nodes;
-	for (; idx0 < num_nodes; idx0++)
-	{
-		out[idx0] = parents[idx0];
-		out[idx1] = parents[idx1];
-		out[idx2] = parents[idx2];
-
-		idx1++;
-		idx2++;
-	}
+	memcpy(&out[0], &parents[0], sizeof(uint128_t) * num_nodes);
+	memcpy(&out[num_nodes], &parents[num_nodes], sizeof(uint128_t) * num_nodes);
+	memcpy(&out[two_num_nodes], &parents[two_num_nodes], sizeof(uint128_t) * num_nodes);
 
 	free(parents);
 }
