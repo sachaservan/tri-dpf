@@ -65,8 +65,6 @@ void DPFGen(
 		// get the current trit (ternary bit) of the special index
 		uint8_t trit = get_trit(index, size, i);
 
-		// printf("trit %d = %d\n", i, trit);
-
 		switch (trit)
 		{
 		case 0:
@@ -189,37 +187,13 @@ void DPFFullDomainEval(
 		idx0 = 0;
 		idx1 = num_nodes;
 		idx2 = two_num_nodes;
-
-		// printf("cb: %s\n", parents[idx0] & 1 ? "true" : "false");
-
-		while (idx0 < num_nodes)
+		for (; idx0 < num_nodes; idx0++)
 		{
-			// if (i >= 5 && idx0 == 0)
-			// {
-			// 	printBytes(&parents[39369], 16);
-			// 	// printBytes(&sCW2[i], 16);
-			// 	printf("cb: %d\n", parents[idx0] & 1);
-			// }
-			if (parents[idx0] & 1) // gets the LSB of the parent
-			{
-				parents[idx0] = out[idx0] ^ sCW0[i];
-				parents[idx1] = out[idx1] ^ sCW1[i];
-				parents[idx2] = out[idx2] ^ sCW2[i];
-			}
-			else
-			{
-				parents[idx0] = out[idx0];
-				parents[idx1] = out[idx1];
-				parents[idx2] = out[idx2];
-			}
+			uint8_t cb = parents[idx0] & 1; // gets the LSB of the parent
+			parents[idx0] = out[idx0] ^ (cb * sCW0[i]);
+			parents[idx1] = out[idx1] ^ (cb * sCW1[i]);
+			parents[idx2] = out[idx2] ^ (cb * sCW2[i]);
 
-			// if (i >= 10 && idx0 == 0)
-			// {
-			// 	printBytes(&parents[1594323], 16);
-			// 	printf("\n");
-			// }
-
-			idx0++;
 			idx1++;
 			idx2++;
 		}
@@ -234,14 +208,12 @@ void DPFFullDomainEval(
 	idx0 = 0;
 	idx1 = num_nodes;
 	idx2 = two_num_nodes;
-	i = 0;
-	for (; i < num_nodes; i++)
+	for (; idx0 < num_nodes; idx0++)
 	{
 		out[idx0] = parents[idx0];
 		out[idx1] = parents[idx1];
 		out[idx2] = parents[idx2];
 
-		idx0++;
 		idx1++;
 		idx2++;
 	}
