@@ -169,9 +169,9 @@ void DPFFullDomainEval(
 	uint128_t *parents = malloc(sizeof(uint128_t) * last_level_eval_size);
 
 	memcpy(&parents[0], &k[0], 16); // parents[0] is the start seed
-	uint128_t *sCW0 = &k[16];
-	uint128_t *sCW1 = &k[16 * size + 16];
-	uint128_t *sCW2 = &k[16 * 2 * size + 16];
+	uint128_t *sCW0 = (uint128_t *)&k[16];
+	uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
+	uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
 
 	uint64_t idx0, idx1, idx2; // indices of the left, middle, and right nodes
 	uint64_t num_nodes = 1;
