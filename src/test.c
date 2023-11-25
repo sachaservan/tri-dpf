@@ -7,14 +7,16 @@
 #include <time.h>
 #include "../include/prf.h"
 #include "../include/dpf.h"
+#include "../include/fastdpf.h"
+#include "../include/utils.h"
 
-#define FULLEVALDOMAIN 10
-#define MAXRANDINDEX 1ULL << FULLEVALDOMAIN
+#define FULLEVALDOMAIN 14
+#define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
 {
     srand(time(NULL));
-    return ((uint64_t)rand()) % (MAXRANDINDEX);
+    return ((uint64_t)rand()) % ((uint64_t)MAXRANDINDEX);
 }
 
 void testDPF()
@@ -22,7 +24,7 @@ void testDPF()
     size_t outl = pow(3, FULLEVALDOMAIN);
     int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
 
-    uint64_t secretIndex = 0; // randIndex();
+    uint64_t secretIndex = randIndex();
     uint8_t *key0 = malloc(sizeof(uint128_t));
     uint8_t *key1 = malloc(sizeof(uint128_t));
     uint8_t *key2 = malloc(sizeof(uint128_t));
@@ -80,9 +82,79 @@ void testDPF()
         }
     }
 
-    destroyPRFKey(prfKey0);
-    destroyPRFKey(prfKey1);
-    destroyPRFKey(prfKey2);
+    DestroyPRFKey(prfKey0);
+    DestroyPRFKey(prfKey1);
+    DestroyPRFKey(prfKey2);
+
+    free(kA);
+    free(kB);
+    free(shares0);
+    free(shares1);
+    printf("DONE\n\n");
+}
+
+void testFastDPF()
+{
+    size_t outl = pow(3, FULLEVALDOMAIN);
+    int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
+
+    uint64_t secretIndex = randIndex();
+    uint8_t *key0 = malloc(sizeof(uint128_t));
+    uint8_t *key1 = malloc(sizeof(uint128_t));
+
+    RAND_bytes(key0, sizeof(uint128_t));
+    RAND_bytes(key1, sizeof(uint128_t));
+
+    EVP_CIPHER_CTX *prfKey0 = PRFKeyGen(key0);
+    EVP_CIPHER_CTX *prfKey1 = PRFKeyGen(key1);
+
+    unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
+    unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
+
+    uint128_t *shares0 = malloc(sizeof(uint128_t) * outl);
+    uint128_t *shares1 = malloc(sizeof(uint128_t) * outl);
+
+    FastDPFGen(prfKey0, prfKey1, size, secretIndex, kA, kB);
+
+    //************************************************
+    // Test full domain evaluation
+    //************************************************
+    printf("Testing full-domain evaluation optimization\n");
+    //************************************************
+
+    clock_t t;
+    t = clock();
+    FastDPFFullDomainEval(prfKey0, prfKey1, kA, size, shares0);
+    t = clock() - t;
+    double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
+
+    printf("DPF full-domain eval time (total) %f ms\n", time_taken);
+
+    FastDPFFullDomainEval(prfKey0, prfKey1, kB, size, shares1);
+
+    if ((shares0[secretIndex] ^ shares1[secretIndex]) == 0)
+    {
+        printf("FAIL (zero)\n");
+        exit(0);
+    }
+
+    for (size_t i = 0; i < outl; i++)
+    {
+        if (i == secretIndex)
+            continue;
+
+        if ((shares0[i] ^ shares1[i]) != 0)
+        {
+            printf("FAIL (non-zero) %zu\n", i);
+            printBytes(&shares0[i], 16);
+            printBytes(&shares1[i], 16);
+
+            exit(0);
+        }
+    }
+
+    DestroyPRFKey(prfKey0);
+    DestroyPRFKey(prfKey1);
 
     free(kA);
     free(kB);
@@ -94,12 +166,20 @@ void testDPF()
 int main(int argc, char **argv)
 {
 
-    int testTrials = 20;
+    int testTrials = 5;
 
     printf("******************************************\n");
     printf("Testing DPF\n");
     for (int i = 0; i < testTrials; i++)
         testDPF();
+    printf("******************************************\n");
+    printf("PASS\n");
+    printf("******************************************\n\n");
+
+    printf("******************************************\n");
+    printf("Testing Fast DPF\n");
+    for (int i = 0; i < testTrials; i++)
+        testFastDPF();
     printf("******************************************\n");
     printf("PASS\n");
     printf("******************************************\n\n");
