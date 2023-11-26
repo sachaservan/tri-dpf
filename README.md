@@ -17,6 +17,7 @@ Optimizations include:
 * OpenSSL 1.1.1f
 * GNU Make
 * Cmake
+* Clang-11
 
 ## Getting everything to run (tested on Ubuntu, CentOS, and MacOS)
 
@@ -25,12 +26,7 @@ Optimizations include:
 |```sudo apt-get install build-essential``` |  ```sudo yum groupinstall 'Development Tools'```|
 |```sudo apt-get install cmake```| ```sudo yum install cmake```|
 |```sudo apt install libssl-dev```|```sudo yum install openssl-devel```|
-
-
-For optimal performance, you should compile the C code with clang (approximately 10-20 percent faster than the default on some distributions).
-- Clang-11: On Ubuntu run ```sudo apt install clang```.  On CentOS, ```sudo yum install clang```.
-  - You'll also need llvm if you use clang. 
-- LLVM-AR: On Ubuntu run ```sudo apt install llvm```. On CentOS, ```sudo yum install llvm```.
+|```sudo apt install clang```|```sudo yum install clang```|
 
 
 ### Running tests and benchmarks
