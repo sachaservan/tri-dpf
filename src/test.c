@@ -10,7 +10,7 @@
 #include "../include/fastdpf.h"
 #include "../include/utils.h"
 
-#define FULLEVALDOMAIN 14
+#define FULLEVALDOMAIN 15
 #define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
@@ -42,6 +42,14 @@ void testDPF()
 
     uint128_t *shares0 = malloc(sizeof(uint128_t) * outl);
     uint128_t *shares1 = malloc(sizeof(uint128_t) * outl);
+
+    // make shares something non-zero so as to make sure the
+    // DPF evaluation overwrites them
+    for (size_t i = 0; i < outl; i++)
+    {
+        shares0[i] = 1;
+        shares1[i] = 2;
+    }
 
     DPFGen(prfKey0, prfKey1, prfKey2, size, secretIndex, kA, kB);
 
@@ -163,6 +171,39 @@ void testFastDPF()
     printf("DONE\n\n");
 }
 
+void benchmarkAES()
+{
+    size_t outl = pow(3, FULLEVALDOMAIN);
+    int size = FULLEVALDOMAIN;
+
+    uint8_t *key = malloc(sizeof(uint128_t));
+
+    RAND_bytes(key, sizeof(uint128_t));
+    EVP_CIPHER_CTX *prfKey = PRFKeyGen(key);
+
+    uint128_t *data_in = malloc(sizeof(uint128_t) * outl);
+    uint128_t *data_out = malloc(sizeof(uint128_t) * outl);
+
+    // make the input data pseudorandom for correct timing
+    PRFBatchEval(prfKey, data_in, data_out, outl);
+    PRFBatchEval(prfKey, data_out, data_in, outl);
+
+    clock_t t;
+    t = clock();
+    int num_blocks = 1;
+    for (int i = 0; i < size; i++)
+    {
+        PRFBatchEval(prfKey, data_in, data_out, num_blocks);
+        PRFBatchEval(prfKey, data_out, data_in, num_blocks);
+        PRFBatchEval(prfKey, data_in, data_out, num_blocks);
+        num_blocks *= 3;
+    }
+    t = clock() - t;
+    double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
+
+    printf("AES batch encryption time (total) %f ms\n", time_taken);
+}
+
 int main(int argc, char **argv)
 {
 
@@ -182,5 +223,13 @@ int main(int argc, char **argv)
         testFastDPF();
     printf("******************************************\n");
     printf("PASS\n");
+    printf("******************************************\n\n");
+
+    printf("******************************************\n");
+    printf("Benchmarking AES\n");
+    for (int i = 0; i < testTrials; i++)
+        benchmarkAES();
+    printf("******************************************\n");
+    printf("DONE\n");
     printf("******************************************\n\n");
 }
