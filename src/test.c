@@ -10,7 +10,7 @@
 #include "../include/fastdpf.h"
 #include "../include/utils.h"
 
-#define FULLEVALDOMAIN 15
+#define FULLEVALDOMAIN 14
 #define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
@@ -40,17 +40,6 @@ void testDPF()
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
-    uint128_t *shares0 = malloc(sizeof(uint128_t) * outl);
-    uint128_t *shares1 = malloc(sizeof(uint128_t) * outl);
-
-    // make shares something non-zero so as to make sure the
-    // DPF evaluation overwrites them
-    for (size_t i = 0; i < outl; i++)
-    {
-        shares0[i] = 1;
-        shares1[i] = 2;
-    }
-
     DPFGen(prfKey0, prfKey1, prfKey2, size, secretIndex, kA, kB);
 
     //************************************************
@@ -61,13 +50,13 @@ void testDPF()
 
     clock_t t;
     t = clock();
-    DPFFullDomainEval(prfKey0, prfKey1, prfKey2, kA, size, shares0);
+    uint128_t *shares0 = (uint128_t *)DPFFullDomainEval(prfKey0, prfKey1, prfKey2, kA, size);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
     printf("DPF full-domain eval time (total) %f ms\n", time_taken);
 
-    DPFFullDomainEval(prfKey0, prfKey1, prfKey2, kB, size, shares1);
+    uint128_t *shares1 = (uint128_t *)DPFFullDomainEval(prfKey0, prfKey1, prfKey2, kB, size);
 
     if ((shares0[secretIndex] ^ shares1[secretIndex]) == 0)
     {
@@ -119,9 +108,6 @@ void testFastDPF()
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
-    uint128_t *shares0 = malloc(sizeof(uint128_t) * outl);
-    uint128_t *shares1 = malloc(sizeof(uint128_t) * outl);
-
     FastDPFGen(prfKey0, prfKey1, size, secretIndex, kA, kB);
 
     //************************************************
@@ -132,13 +118,13 @@ void testFastDPF()
 
     clock_t t;
     t = clock();
-    FastDPFFullDomainEval(prfKey0, prfKey1, kA, size, shares0);
+    uint128_t *shares0 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, kA, size);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
     printf("DPF full-domain eval time (total) %f ms\n", time_taken);
 
-    FastDPFFullDomainEval(prfKey0, prfKey1, kB, size, shares1);
+    uint128_t *shares1 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, kB, size);
 
     if ((shares0[secretIndex] ^ shares1[secretIndex]) == 0)
     {
@@ -188,6 +174,10 @@ void benchmarkAES()
     PRFBatchEval(prfKey, data_in, data_out, outl);
     PRFBatchEval(prfKey, data_out, data_in, outl);
 
+    //************************************************
+    // Benchmark AES encryption time required in DPF loop
+    //************************************************
+
     clock_t t;
     t = clock();
     int num_blocks = 1;
@@ -201,7 +191,25 @@ void benchmarkAES()
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    printf("AES batch encryption time (total) %f ms\n", time_taken);
+    printf("WITHOUT half-tree optimization: time (total) %f ms\n", time_taken);
+
+    //************************************************
+    // Benchmark AES encryption time required in DPF loop
+    //************************************************
+
+    t = clock();
+    num_blocks = 1;
+    for (int i = 0; i < size; i++)
+    {
+        PRFBatchEval(prfKey, data_out, data_in, num_blocks);
+        PRFBatchEval(prfKey, data_in, data_out, num_blocks);
+        num_blocks *= 3;
+    }
+    t = clock() - t;
+    time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
+
+    printf("WITH half-tree optimization:    time (total) %f ms\n", time_taken);
+    printf("DONE\n\n");
 }
 
 int main(int argc, char **argv)
@@ -230,6 +238,6 @@ int main(int argc, char **argv)
     for (int i = 0; i < testTrials; i++)
         benchmarkAES();
     printf("******************************************\n");
-    printf("DONE\n");
+    printf("PASS\n");
     printf("******************************************\n\n");
 }

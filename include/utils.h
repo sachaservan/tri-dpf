@@ -19,7 +19,6 @@ static inline uint128_t get_lsb(uint128_t input)
 
 static inline int get_trit(uint64_t x, int size, int t)
 {
-
     int ternary[size];
     for (int i = 0; i < size; i++)
     {

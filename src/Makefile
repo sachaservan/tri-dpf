@@ -1,6 +1,6 @@
 TARGET = test
 CFLAGS = -O3
-LDFLAGS = -lcrypto -lssl -lm -mavx2 -maes
+LDFLAGS = -lcrypto -lssl -lm -maes
 
 $(TARGET): test.o libdpf.a
 	gcc $^ -o $@ $(LDFLAGS)
