@@ -5,7 +5,8 @@ A pure C implementation of Distributed Point Functions (DPFs) with several perfo
 ### TODOs
 - [ ] make the DPF output consist of a chosen message
 - [ ] implement the early termination optimization
-- [ ] squeeze out more performance (currently ~2X slower than just running AES)
+- [ ] squeeze out more performance (currently ~2-6x slower than just running AES)
+- [ ] reduce key size by dropping one correction word
 
 Optimizations include:
 * Ternary instead of a binary tree (increases communication slightly but improves evaluation performance)
