@@ -4,10 +4,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
 
 #include <openssl/conf.h>
 #include <openssl/evp.h>
@@ -24,12 +20,11 @@ extern void DPFGen(EVP_CIPHER_CTX *prfKey0,
                    unsigned char *k0,
                    unsigned char *k1);
 
-extern void DPFFullDomainEval(
+extern unsigned char *DPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
     EVP_CIPHER_CTX *prfKey2,
     unsigned char *k,
-    int size,
-    uint128_t *out);
+    int size);
 
 #endif
