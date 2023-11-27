@@ -7,8 +7,6 @@
 // - A,B refer to shares given to parties A and B
 // - 0,1,2 refer to the branch index in the ternary tree
 
-#define XOR_BATCH 4096 // has to be a power of 2
-
 void DPFGen(
 	EVP_CIPHER_CTX *prfKey0,
 	EVP_CIPHER_CTX *prfKey1,
@@ -164,6 +162,7 @@ unsigned char *DPFFullDomainEval(
 	int size)
 {
 	uint64_t num_leaves = pow(3, size);
+
 	uint128_t *parents = malloc(sizeof(uint128_t) * num_leaves);
 	uint128_t *new_parents = malloc(sizeof(uint128_t) * num_leaves);
 
@@ -174,81 +173,30 @@ unsigned char *DPFFullDomainEval(
 
 	uint64_t idx0, idx1, idx2; // indices of the left, middle, and right nodes
 	uint64_t num_nodes = 1;
-	uint64_t two_num_nodes = 2 * num_nodes;
-
-	uint128_t *restrict p0;
-	uint128_t *restrict p1;
-	uint128_t *restrict p2;
-	uint128_t *restrict np0;
-	uint128_t *restrict np1;
-	uint128_t *restrict np2;
 
 	int i = 0;
-	int j = 0;
 	for (; i < size; i++)
 	{
 		PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
 		PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-		PRFBatchEval(prfKey2, parents, &new_parents[two_num_nodes], num_nodes);
+		PRFBatchEval(prfKey2, parents, &new_parents[2 * num_nodes], num_nodes);
 
 		idx0 = 0;
 		idx1 = num_nodes;
-		idx2 = two_num_nodes;
+		idx2 = 2 * num_nodes;
 
-		if (num_nodes > XOR_BATCH)
+		for (; idx0 < num_nodes; idx0++)
 		{
-			for (; idx0 < num_nodes - XOR_BATCH; idx0 += XOR_BATCH)
-			{
-				p0 = __builtin_assume_aligned(&parents[idx0], XOR_BATCH);
-				p1 = __builtin_assume_aligned(&parents[idx1], XOR_BATCH);
-				p2 = __builtin_assume_aligned(&parents[idx2], XOR_BATCH);
-				np0 = __builtin_assume_aligned(&new_parents[idx0], XOR_BATCH);
-				np1 = __builtin_assume_aligned(&new_parents[idx1], XOR_BATCH);
-				np2 = __builtin_assume_aligned(&new_parents[idx2], XOR_BATCH);
+			uint8_t cb = parents[idx0] & 1; // gets the LSB of the parent
+			parents[idx0] = new_parents[idx0] ^ (cb * sCW0[i]);
+			parents[idx1] = new_parents[idx1] ^ (cb * sCW1[i]);
+			parents[idx2] = new_parents[idx2] ^ (cb * sCW2[i]);
 
-				j = 0;
-				for (; j < XOR_BATCH; j++)
-				{
-					uint8_t cb = p0[j] & 1; // gets the LSB of the parent
-					p0[j] = np0[j] ^ (cb * sCW0[i]);
-					p1[j] = np1[j] ^ (cb * sCW1[i]);
-					p2[j] = np2[j] ^ (cb * sCW2[i]);
-				}
-
-				idx1 += XOR_BATCH;
-				idx2 += XOR_BATCH;
-			}
-
-			idx0 = num_nodes - num_nodes % XOR_BATCH;
-			idx1 = idx0 + num_nodes;
-			idx2 = idx1 + num_nodes;
-			for (; idx0 < num_nodes; idx0++)
-			{
-				uint8_t cb = parents[idx0] & 1; // gets the LSB of the parent
-				parents[idx0] = new_parents[idx0] ^ (cb * sCW0[i]);
-				parents[idx1] = new_parents[idx1] ^ (cb * sCW1[i]);
-				parents[idx2] = new_parents[idx2] ^ (cb * sCW2[i]);
-
-				idx1++;
-				idx2++;
-			}
-		}
-		else
-		{
-			for (; idx0 < num_nodes; idx0++)
-			{
-				uint8_t cb = parents[idx0] & 1; // gets the LSB of the parent
-				parents[idx0] = new_parents[idx0] ^ (cb * sCW0[i]);
-				parents[idx1] = new_parents[idx1] ^ (cb * sCW1[i]);
-				parents[idx2] = new_parents[idx2] ^ (cb * sCW2[i]);
-
-				idx1++;
-				idx2++;
-			}
+			idx1++;
+			idx2++;
 		}
 
 		num_nodes *= 3;
-		two_num_nodes = 2 * num_nodes;
 	}
 
 	free(new_parents);
