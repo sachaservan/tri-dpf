@@ -170,6 +170,12 @@ void benchmarkAES()
     uint128_t *data_in = malloc(sizeof(uint128_t) * outl);
     uint128_t *data_out = malloc(sizeof(uint128_t) * outl);
 
+    // fill with unique data
+    for (int i = 0; i < outl; i++)
+    {
+        data_in[i] = (uint128_t)i;
+    }
+
     // make the input data pseudorandom for correct timing
     PRFBatchEval(prfKey, data_in, data_out, outl);
     PRFBatchEval(prfKey, data_out, data_in, outl);
