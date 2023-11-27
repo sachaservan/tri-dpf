@@ -4,7 +4,6 @@
 #include <openssl/rand.h>
 
 // Naming conventions:
-// - L,R refer to the left and right child nodes on the DPF/GGM tree
 // - A,B refer to shares given to parties A and B
 // - 0,1,2 refer to the branch index in the ternary tree
 
