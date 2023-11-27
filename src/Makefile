@@ -1,6 +1,6 @@
 TARGET = test
 CFLAGS = -O3
-LDFLAGS = -lcrypto -lssl -lm -maes -ffast-math
+LDFLAGS = -march=native -lcrypto -lssl -lm -maes -ffast-math
 
 $(TARGET): test.o libdpf.a
 	gcc $^ -o $@ $(LDFLAGS)
