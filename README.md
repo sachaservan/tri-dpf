@@ -18,7 +18,7 @@ Optimizations include:
 * OpenSSL 1.1.1f
 * GNU Make
 * Cmake
-* Clang-11
+* Clang
 
 ## Getting everything to run (tested on Ubuntu, CentOS, and MacOS)
 
