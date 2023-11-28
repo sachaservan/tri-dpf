@@ -10,7 +10,7 @@
 #include "../include/fastdpf.h"
 #include "../include/utils.h"
 
-#define FULLEVALDOMAIN 14
+#define FULLEVALDOMAIN 15
 #define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
