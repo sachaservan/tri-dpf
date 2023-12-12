@@ -46,10 +46,10 @@ Domain of size $3^{14} \approx 2^{22}$.
 ```
 ******************************************
 Testing DPF (without half-tree optimization)
-DPF full-domain eval time (total) 19.515000 ms
+DPF full-domain eval time (total) 18.515000 ms
 ******************************************
 Testing Fast DPF (with half-tree optimization)
-DPF full-domain eval time (total) 17.641000 ms
+DPF full-domain eval time (total) 14.641000 ms
 ******************************************
 ******************************************
 Benchmarking AES
