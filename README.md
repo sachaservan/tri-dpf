@@ -8,6 +8,7 @@ A pure C implementation of Distributed Point Functions (DPFs) with several perfo
 
 - [ ] implement the early termination optimization
 - [ ] reduce key size by dropping one correction word
+- [ ] fastDPF needs to have final layer hashed for security
 
 Optimizations include:
 
