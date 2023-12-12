@@ -19,12 +19,21 @@ uint64_t randIndex()
     return ((uint64_t)rand()) % ((uint64_t)MAXRANDINDEX);
 }
 
-void testDPF()
+uint128_t randMsg()
+{
+    uint128_t msg;
+    RAND_bytes((uint8_t *)&msg, sizeof(uint128_t));
+    return msg;
+}
+
+double testDPF()
 {
     size_t outl = pow(3, FULLEVALDOMAIN);
     int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
 
-    uint64_t secretIndex = randIndex();
+    uint64_t secret_index = randIndex();
+    uint128_t secret_msg = randMsg();
+
     uint8_t *key0 = malloc(sizeof(uint128_t));
     uint8_t *key1 = malloc(sizeof(uint128_t));
     uint8_t *key2 = malloc(sizeof(uint128_t));
@@ -40,7 +49,7 @@ void testDPF()
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
-    DPFGen(prfKey0, prfKey1, prfKey2, size, secretIndex, kA, kB);
+    DPFGen(prfKey0, prfKey1, prfKey2, size, secret_index, secret_msg, kA, kB);
 
     //************************************************
     // Test full domain evaluation
@@ -58,15 +67,15 @@ void testDPF()
 
     uint128_t *shares1 = (uint128_t *)DPFFullDomainEval(prfKey0, prfKey1, prfKey2, kB, size);
 
-    if ((shares0[secretIndex] ^ shares1[secretIndex]) == 0)
+    if ((shares0[secret_index] ^ shares1[secret_index]) != secret_msg)
     {
-        printf("FAIL (zero)\n");
+        printf("FAIL (wrong message)\n");
         exit(0);
     }
 
     for (size_t i = 0; i < outl; i++)
     {
-        if (i == secretIndex)
+        if (i == secret_index)
             continue;
 
         if ((shares0[i] ^ shares1[i]) != 0)
@@ -88,14 +97,18 @@ void testDPF()
     free(shares0);
     free(shares1);
     printf("DONE\n\n");
+
+    return time_taken;
 }
 
-void testFastDPF()
+double testFastDPF()
 {
     size_t outl = pow(3, FULLEVALDOMAIN);
     int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
 
-    uint64_t secretIndex = randIndex();
+    uint64_t secret_index = randIndex();
+    uint128_t secret_msg = randMsg();
+
     uint8_t *key0 = malloc(sizeof(uint128_t));
     uint8_t *key1 = malloc(sizeof(uint128_t));
 
@@ -108,7 +121,7 @@ void testFastDPF()
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
-    FastDPFGen(prfKey0, prfKey1, size, secretIndex, kA, kB);
+    FastDPFGen(prfKey0, prfKey1, size, secret_index, secret_msg, kA, kB);
 
     //************************************************
     // Test full domain evaluation
@@ -126,15 +139,15 @@ void testFastDPF()
 
     uint128_t *shares1 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, kB, size);
 
-    if ((shares0[secretIndex] ^ shares1[secretIndex]) == 0)
+    if ((shares0[secret_index] ^ shares1[secret_index]) != secret_msg)
     {
-        printf("FAIL (zero)\n");
+        printf("FAIL (wrong message)\n");
         exit(0);
     }
 
     for (size_t i = 0; i < outl; i++)
     {
-        if (i == secretIndex)
+        if (i == secret_index)
             continue;
 
         if ((shares0[i] ^ shares1[i]) != 0)
@@ -155,6 +168,8 @@ void testFastDPF()
     free(shares0);
     free(shares1);
     printf("DONE\n\n");
+
+    return time_taken;
 }
 
 void benchmarkAES()
@@ -162,23 +177,28 @@ void benchmarkAES()
     size_t outl = pow(3, FULLEVALDOMAIN);
     int size = FULLEVALDOMAIN;
 
-    uint8_t *key = malloc(sizeof(uint128_t));
+    uint128_t key1;
+    uint128_t key2;
+    uint128_t key3;
 
-    RAND_bytes(key, sizeof(uint128_t));
-    EVP_CIPHER_CTX *prfKey = PRFKeyGen(key);
+    RAND_bytes((uint8_t *)&key1, sizeof(uint128_t));
+    RAND_bytes((uint8_t *)&key2, sizeof(uint128_t));
+    RAND_bytes((uint8_t *)&key3, sizeof(uint128_t));
+
+    EVP_CIPHER_CTX *prfKey1 = PRFKeyGen((uint8_t *)&key1);
+    EVP_CIPHER_CTX *prfKey2 = PRFKeyGen((uint8_t *)&key2);
+    EVP_CIPHER_CTX *prfKey3 = PRFKeyGen((uint8_t *)&key3);
 
     uint128_t *data_in = malloc(sizeof(uint128_t) * outl);
     uint128_t *data_out = malloc(sizeof(uint128_t) * outl);
 
     // fill with unique data
     for (int i = 0; i < outl; i++)
-    {
         data_in[i] = (uint128_t)i;
-    }
 
     // make the input data pseudorandom for correct timing
-    PRFBatchEval(prfKey, data_in, data_out, outl);
-    PRFBatchEval(prfKey, data_out, data_in, outl);
+    PRFBatchEval(prfKey1, data_in, data_out, outl);
+    PRFBatchEval(prfKey2, data_out, data_in, outl);
 
     //************************************************
     // Benchmark AES encryption time required in DPF loop
@@ -189,9 +209,9 @@ void benchmarkAES()
     int num_blocks = 1;
     for (int i = 0; i < size; i++)
     {
-        PRFBatchEval(prfKey, data_in, data_out, num_blocks);
-        PRFBatchEval(prfKey, data_out, data_in, num_blocks);
-        PRFBatchEval(prfKey, data_in, data_out, num_blocks);
+        PRFBatchEval(prfKey1, data_in, data_out, num_blocks);
+        PRFBatchEval(prfKey2, data_out, data_in, num_blocks);
+        PRFBatchEval(prfKey3, data_in, data_out, num_blocks);
         num_blocks *= 3;
     }
     t = clock() - t;
@@ -207,8 +227,8 @@ void benchmarkAES()
     num_blocks = 1;
     for (int i = 0; i < size; i++)
     {
-        PRFBatchEval(prfKey, data_out, data_in, num_blocks);
-        PRFBatchEval(prfKey, data_in, data_out, num_blocks);
+        PRFBatchEval(prfKey1, data_out, data_in, num_blocks);
+        PRFBatchEval(prfKey2, data_in, data_out, num_blocks);
         num_blocks *= 3;
     }
     t = clock() - t;
@@ -221,26 +241,33 @@ void benchmarkAES()
 int main(int argc, char **argv)
 {
 
-    int testTrials = 5;
+    double time = 0;
+    int testTrials = 3;
 
     printf("******************************************\n");
     printf("Testing DPF\n");
+    testDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
-        testDPF();
+        time += testDPF();
     printf("******************************************\n");
     printf("PASS\n");
+    printf("Avg time: %f\n", time / testTrials);
     printf("******************************************\n\n");
 
+    time = 0;
     printf("******************************************\n");
     printf("Testing Fast DPF\n");
+    testDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
-        testFastDPF();
+        time += testFastDPF();
     printf("******************************************\n");
     printf("PASS\n");
+    printf("Avg time: %f\n", time / testTrials);
     printf("******************************************\n\n");
 
     printf("******************************************\n");
     printf("Benchmarking AES\n");
+    benchmarkAES(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
         benchmarkAES();
     printf("******************************************\n");

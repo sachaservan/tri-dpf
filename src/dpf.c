@@ -13,6 +13,7 @@ void DPFGen(
 	EVP_CIPHER_CTX *prfKey2,
 	int size,
 	uint64_t index,
+	uint128_t msg,
 	unsigned char *kA,
 	unsigned char *kB)
 {
@@ -138,6 +139,15 @@ void DPFGen(
 		}
 	}
 
+	// set the last correction word to correct the output to msg
+	uint8_t last_trit = get_trit(index, size, size - 1);
+	if (last_trit == 0)
+		sCW0[size - 1] ^= sCW0[size - 1] ^ sA0 ^ sB0 ^ msg;
+	else if (last_trit == 1)
+		sCW1[size - 1] ^= sCW1[size - 1] ^ sA1 ^ sB1 ^ msg;
+	else if (last_trit == 2)
+		sCW2[size - 1] ^= sCW2[size - 1] ^ sA2 ^ sB2 ^ msg;
+
 	// memcpy all the generated values into two keys
 	// 16 = sizeof(uint128_t)
 	memcpy(&kA[0], &seedA, 16);
@@ -158,36 +168,37 @@ unsigned char *DPFFullDomainEval(
 	EVP_CIPHER_CTX *prfKey0,
 	EVP_CIPHER_CTX *prfKey1,
 	EVP_CIPHER_CTX *prfKey2,
-	unsigned char *k,
-	int size)
+	const uint8_t *k,
+	const uint8_t size)
 {
-	uint64_t num_leaves = pow(3, size);
+	// full_eval_size = pow(3, size);
+	const size_t num_leaves = pow(3, size);
 
 	uint128_t *parents = malloc(sizeof(uint128_t) * num_leaves);
 	uint128_t *new_parents = malloc(sizeof(uint128_t) * num_leaves);
 
 	memcpy(&parents[0], &k[0], 16); // parents[0] is the start seed
-	uint128_t *sCW0 = (uint128_t *)&k[16];
-	uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
-	uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
+	const uint128_t *sCW0 = (uint128_t *)&k[16];
+	const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
+	const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
 
-	uint64_t idx0, idx1, idx2; // indices of the left, middle, and right nodes
-	uint64_t num_nodes = 1;
+	size_t idx0, idx1, idx2; // indices of the left, middle, and right nodes
+	uint8_t cb = 0;
 
-	int i = 0;
-	for (; i < size; i++)
+	size_t num_nodes = 1;
+	for (uint8_t i = 0; i < size; i++)
 	{
 		PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
 		PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-		PRFBatchEval(prfKey2, parents, &new_parents[2 * num_nodes], num_nodes);
+		PRFBatchEval(prfKey2, parents, &new_parents[num_nodes << 1], num_nodes);
 
 		idx0 = 0;
 		idx1 = num_nodes;
-		idx2 = 2 * num_nodes;
+		idx2 = num_nodes << 1;
 
 		for (; idx0 < num_nodes; idx0++)
 		{
-			uint8_t cb = parents[idx0] & 1; // gets the LSB of the parent
+			cb = parents[idx0] & 1; // gets the LSB of the parent
 			parents[idx0] = new_parents[idx0] ^ (cb * sCW0[i]);
 			parents[idx1] = new_parents[idx1] ^ (cb * sCW1[i]);
 			parents[idx2] = new_parents[idx2] ^ (cb * sCW2[i]);

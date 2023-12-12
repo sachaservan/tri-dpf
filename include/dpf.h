@@ -17,6 +17,7 @@ extern void DPFGen(EVP_CIPHER_CTX *prfKey0,
                    EVP_CIPHER_CTX *prfKey2,
                    int size,
                    uint64_t index,
+                   uint128_t msg,
                    unsigned char *k0,
                    unsigned char *k1);
 
@@ -24,7 +25,7 @@ extern unsigned char *DPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
     EVP_CIPHER_CTX *prfKey2,
-    unsigned char *k,
-    int size);
+    const uint8_t *k,
+    const uint8_t size);
 
 #endif

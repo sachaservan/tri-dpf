@@ -16,13 +16,14 @@ extern void FastDPFGen(EVP_CIPHER_CTX *prfKey0,
                        EVP_CIPHER_CTX *prfKey1,
                        int size,
                        uint64_t index,
+                       uint128_t msg,
                        unsigned char *k0,
                        unsigned char *k1);
 
 extern unsigned char *FastDPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
-    unsigned char *k,
-    int size);
+    const unsigned char *k,
+    const uint8_t size);
 
 #endif
