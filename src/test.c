@@ -111,17 +111,20 @@ double testFastDPF()
 
     uint8_t *key0 = malloc(sizeof(uint128_t));
     uint8_t *key1 = malloc(sizeof(uint128_t));
+    uint8_t *key2 = malloc(sizeof(uint128_t));
 
     RAND_bytes(key0, sizeof(uint128_t));
     RAND_bytes(key1, sizeof(uint128_t));
+    RAND_bytes(key2, sizeof(uint128_t));
 
     EVP_CIPHER_CTX *prfKey0 = PRFKeyGen(key0);
     EVP_CIPHER_CTX *prfKey1 = PRFKeyGen(key1);
+    EVP_CIPHER_CTX *prfKey2 = PRFKeyGen(key2);
 
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
-    FastDPFGen(prfKey0, prfKey1, size, secret_index, secret_msg, kA, kB);
+    FastDPFGen(prfKey0, prfKey1, prfKey2, size, secret_index, secret_msg, kA, kB);
 
     //************************************************
     // Test full domain evaluation
@@ -131,13 +134,13 @@ double testFastDPF()
 
     clock_t t;
     t = clock();
-    uint128_t *shares0 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, kA, size);
+    uint128_t *shares0 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, kA, size);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
     printf("DPF full-domain eval time (total) %f ms\n", time_taken);
 
-    uint128_t *shares1 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, kB, size);
+    uint128_t *shares1 = (uint128_t *)FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, kB, size);
 
     if ((shares0[secret_index] ^ shares1[secret_index]) != secret_msg)
     {
@@ -162,6 +165,7 @@ double testFastDPF()
 
     DestroyPRFKey(prfKey0);
     DestroyPRFKey(prfKey1);
+    DestroyPRFKey(prfKey2);
 
     free(kA);
     free(kB);

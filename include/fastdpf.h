@@ -14,6 +14,7 @@ typedef unsigned __int128 uint128_t;
 
 extern void FastDPFGen(EVP_CIPHER_CTX *prfKey0,
                        EVP_CIPHER_CTX *prfKey1,
+                       EVP_CIPHER_CTX *prfKey2,
                        int size,
                        uint64_t index,
                        uint128_t msg,
@@ -23,6 +24,7 @@ extern void FastDPFGen(EVP_CIPHER_CTX *prfKey0,
 extern unsigned char *FastDPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
+    EVP_CIPHER_CTX *prfKey2,
     const unsigned char *k,
     const uint8_t size);
 

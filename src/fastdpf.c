@@ -10,6 +10,7 @@
 void FastDPFGen(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
+    EVP_CIPHER_CTX *prfKey2,
     int size,
     uint64_t index,
     uint128_t msg,
@@ -54,9 +55,17 @@ void FastDPFGen(
         PRFEval(prfKey0, &parentB, &sB0);
         PRFEval(prfKey1, &parentB, &sB1);
 
-        // set the third seed to be the xor of the siblings and the parent
-        sA2 = sA0 ^ sA1 ^ parentA;
-        sB2 = sB0 ^ sB1 ^ parentB;
+        if (i < size - 1)
+        {
+            // set the third seed to be the xor of the siblings and the parent
+            sA2 = sA0 ^ sA1 ^ parentA;
+            sB2 = sB0 ^ sB1 ^ parentB;
+        }
+        else
+        {
+            PRFEval(prfKey2, &parentA, &sA2);
+            PRFEval(prfKey2, &parentB, &sB2);
+        }
 
         // on-path correction word is set to random
         // so as to be indistinguishable from the real correction words
@@ -168,6 +177,7 @@ void FastDPFGen(
 unsigned char *FastDPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
+    EVP_CIPHER_CTX *prfKey2,
     const unsigned char *k,
     const uint8_t size)
 {
@@ -176,6 +186,7 @@ unsigned char *FastDPFFullDomainEval(
     const size_t num_leaves = pow(3, size);
     uint128_t *parents = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *new_parents = malloc(sizeof(uint128_t) * num_leaves);
+    uint128_t *tmp;
 
     memcpy(&parents[0], &k[0], 16); // parents[0] is the start seed
     const uint128_t *sCW0 = (uint128_t *)&k[16];
@@ -186,31 +197,57 @@ unsigned char *FastDPFFullDomainEval(
     size_t num_nodes = 1;
 
     uint8_t cb;
-    for (uint8_t i = 0; i < size; i++)
+    for (uint8_t i = 0; i < size - 1; i++)
     {
         PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
         PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
 
         idx0 = 0;
         idx1 = num_nodes;
-        idx2 = num_nodes << 1;
+        idx2 = num_nodes * 2;
 
-        for (; idx0 < num_nodes; idx0++)
+        while (idx0 < num_nodes)
         {
             cb = parents[idx0] & 1; // gets the LSB of the parent
 
-            // parents[2] = (x ^ H(x) ^ H'(x)) ^ cb*sCW2[i]
-            parents[idx2] = parents[idx0] ^ new_parents[idx0] ^ new_parents[idx1] ^ (cb * sCW2[i]);
-            parents[idx0] = new_parents[idx0] ^ (cb * sCW0[i]);
-            parents[idx1] = new_parents[idx1] ^ (cb * sCW1[i]);
+            // new_parents[2] = (x ^ H(x) ^ H'(x)) ^ cb*sCW2[i]
+            new_parents[idx2] = parents[idx0] ^ new_parents[idx0] ^ new_parents[idx1] ^ (cb * sCW2[i]);
+            new_parents[idx0] ^= (cb * sCW0[i]);
+            new_parents[idx1] ^= (cb * sCW1[i]);
 
+            idx0++;
             idx1++;
             idx2++;
         }
 
+        tmp = parents;
+        parents = new_parents;
+        new_parents = tmp;
+
         num_nodes *= 3;
     }
 
-    free(new_parents);
-    return (unsigned char *)parents;
+    // last level requires hashing the regular way
+    PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
+    PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
+    PRFBatchEval(prfKey2, parents, &new_parents[num_nodes << 1], num_nodes);
+
+    idx0 = 0;
+    idx1 = num_nodes;
+    idx2 = num_nodes * 2;
+
+    while (idx0 < num_nodes)
+    {
+        cb = parents[idx0] & 1; // gets the LSB of the parent
+        new_parents[idx0] ^= (cb * sCW0[size - 1]);
+        new_parents[idx1] ^= (cb * sCW1[size - 1]);
+        new_parents[idx2] ^= (cb * sCW2[size - 1]);
+
+        idx0++;
+        idx1++;
+        idx2++;
+    }
+
+    free(parents);
+    return (unsigned char *)new_parents;
 }

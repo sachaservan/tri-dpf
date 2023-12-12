@@ -176,6 +176,7 @@ unsigned char *DPFFullDomainEval(
 
 	uint128_t *parents = malloc(sizeof(uint128_t) * num_leaves);
 	uint128_t *new_parents = malloc(sizeof(uint128_t) * num_leaves);
+	uint128_t *tmp;
 
 	memcpy(&parents[0], &k[0], 16); // parents[0] is the start seed
 	const uint128_t *sCW0 = (uint128_t *)&k[16];
@@ -190,22 +191,27 @@ unsigned char *DPFFullDomainEval(
 	{
 		PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
 		PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-		PRFBatchEval(prfKey2, parents, &new_parents[num_nodes << 1], num_nodes);
+		PRFBatchEval(prfKey2, parents, &new_parents[num_nodes * 2], num_nodes);
 
 		idx0 = 0;
 		idx1 = num_nodes;
 		idx2 = num_nodes << 1;
 
-		for (; idx0 < num_nodes; idx0++)
+		while (idx0 < num_nodes)
 		{
 			cb = parents[idx0] & 1; // gets the LSB of the parent
-			parents[idx0] = new_parents[idx0] ^ (cb * sCW0[i]);
-			parents[idx1] = new_parents[idx1] ^ (cb * sCW1[i]);
-			parents[idx2] = new_parents[idx2] ^ (cb * sCW2[i]);
+			new_parents[idx0] ^= (cb * sCW0[i]);
+			new_parents[idx1] ^= (cb * sCW1[i]);
+			new_parents[idx2] ^= (cb * sCW2[i]);
 
+			idx0++;
 			idx1++;
 			idx2++;
 		}
+
+		tmp = parents;
+		parents = new_parents;
+		new_parents = tmp;
 
 		num_nodes *= 3;
 	}
