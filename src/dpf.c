@@ -183,30 +183,40 @@ unsigned char *DPFFullDomainEval(
 	const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
 	const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
 
-	size_t idx0, idx1, idx2; // indices of the left, middle, and right nodes
+	size_t idx0;
 	uint8_t cb = 0;
 
 	size_t num_nodes = 1;
+	size_t b, offset;
 	for (uint8_t i = 0; i < size; i++)
 	{
-		PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
-		PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-		PRFBatchEval(prfKey2, parents, &new_parents[num_nodes * 2], num_nodes);
-
-		idx0 = 0;
-		idx1 = num_nodes;
-		idx2 = num_nodes << 1;
-
-		while (idx0 < num_nodes)
+		size_t batch_size = pow(3, 5);
+		size_t num_batches = num_nodes / batch_size;
+		if (i < 6)
 		{
-			cb = parents[idx0] & 1; // gets the LSB of the parent
-			new_parents[idx0] ^= (cb * sCW0[i]);
-			new_parents[idx1] ^= (cb * sCW1[i]);
-			new_parents[idx2] ^= (cb * sCW2[i]);
+			batch_size = num_nodes;
+			num_batches = 1;
+		}
 
-			idx0++;
-			idx1++;
-			idx2++;
+		offset = 0;
+		for (b = 0; b < num_batches; b++)
+		{
+			PRFBatchEval(prfKey0, &parents[offset], &new_parents[offset], batch_size);
+			PRFBatchEval(prfKey1, &parents[offset], &new_parents[num_nodes + offset], batch_size);
+			PRFBatchEval(prfKey2, &parents[offset], &new_parents[(num_nodes * 2) + offset], batch_size);
+
+			idx0 = offset;
+			while (idx0 < offset + batch_size)
+			{
+				cb = parents[idx0] & 1; // gets the LSB of the parent
+				new_parents[idx0] ^= (cb * sCW0[i]);
+				new_parents[num_nodes + idx0] ^= (cb * sCW1[i]);
+				new_parents[(num_nodes * 2) + idx0] ^= (cb * sCW2[i]);
+
+				idx0++;
+			}
+
+			offset += batch_size;
 		}
 
 		tmp = parents;

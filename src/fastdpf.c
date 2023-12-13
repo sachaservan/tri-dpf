@@ -193,18 +193,20 @@ unsigned char *FastDPFFullDomainEval(
     const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
     const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
 
-    size_t idx0, idx1, idx2; // indices of the left, middle, and right nodes
+    size_t idx0, idx1, idx2;
     size_t num_nodes = 1;
 
     uint8_t cb;
+
     for (uint8_t i = 0; i < size - 1; i++)
     {
-        PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
+
+        PRFBatchEval(prfKey0, parents, new_parents, num_nodes);
         PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
 
         idx0 = 0;
         idx1 = num_nodes;
-        idx2 = num_nodes * 2;
+        idx2 = (num_nodes * 2);
 
         while (idx0 < num_nodes)
         {
@@ -228,17 +230,17 @@ unsigned char *FastDPFFullDomainEval(
     }
 
     // last level requires hashing the regular way
-    PRFBatchEval(prfKey0, parents, &new_parents[0], num_nodes);
+    PRFBatchEval(prfKey0, parents, new_parents, num_nodes);
     PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-    PRFBatchEval(prfKey2, parents, &new_parents[num_nodes << 1], num_nodes);
+    PRFBatchEval(prfKey2, parents, &new_parents[(num_nodes * 2)], num_nodes);
 
     idx0 = 0;
     idx1 = num_nodes;
-    idx2 = num_nodes * 2;
-
+    idx2 = (num_nodes * 2);
     while (idx0 < num_nodes)
     {
         cb = parents[idx0] & 1; // gets the LSB of the parent
+
         new_parents[idx0] ^= (cb * sCW0[size - 1]);
         new_parents[idx1] ^= (cb * sCW1[size - 1]);
         new_parents[idx2] ^= (cb * sCW2[size - 1]);
