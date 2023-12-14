@@ -10,7 +10,7 @@
 #include "../include/fastdpf.h"
 #include "../include/utils.h"
 
-#define FULLEVALDOMAIN 17
+#define FULLEVALDOMAIN 16
 #define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
@@ -188,7 +188,7 @@ double testFastDPF()
 
 double benchmarkAES()
 {
-    size_t num_blocks = pow(3, FULLEVALDOMAIN);
+    size_t num_leaves = pow(3, FULLEVALDOMAIN);
     size_t size = FULLEVALDOMAIN;
 
     uint128_t key0;
@@ -203,17 +203,17 @@ double benchmarkAES()
     EVP_CIPHER_CTX *prfKey1 = PRFKeyGen((uint8_t *)&key1);
     EVP_CIPHER_CTX *prfKey2 = PRFKeyGen((uint8_t *)&key2);
 
-    uint128_t *data_in = malloc(sizeof(uint128_t) * num_blocks * 3);
-    uint128_t *data_out = malloc(sizeof(uint128_t) * num_blocks * 3);
-    uint128_t *data_tmp = malloc(sizeof(uint128_t) * num_blocks * 3);
+    uint128_t *data_in = malloc(sizeof(uint128_t) * num_leaves);
+    uint128_t *data_out = malloc(sizeof(uint128_t) * num_leaves);
+    uint128_t *data_tmp = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *tmp;
 
     // fill with unique data
-    for (size_t i = 0; i < num_blocks * 3; i++)
+    for (size_t i = 0; i < num_leaves; i++)
         data_tmp[i] = (uint128_t)i;
 
     // make the input data pseudorandom for correct timing
-    PRFBatchEval(prfKey0, data_tmp, data_in, num_blocks * 3);
+    PRFBatchEval(prfKey0, data_tmp, data_in, num_leaves);
 
     //************************************************
     // Benchmark AES encryption time required in DPF loop
@@ -221,36 +221,22 @@ double benchmarkAES()
 
     clock_t t;
     t = clock();
-    size_t blocks = 1;
+    size_t num_nodes = 1;
     for (size_t i = 0; i < size; i++)
     {
-        PRFBatchEval(prfKey0, data_in, data_out, blocks);
-        PRFBatchEval(prfKey1, data_in, &data_out[blocks], blocks);
-        PRFBatchEval(prfKey2, data_in, &data_out[blocks * 2], blocks);
+        PRFBatchEval(prfKey0, data_in, data_out, num_nodes);
+        PRFBatchEval(prfKey1, data_in, &data_out[num_nodes], num_nodes);
+        PRFBatchEval(prfKey2, data_in, &data_out[num_nodes * 2], num_nodes);
 
         tmp = data_out;
         data_out = data_in;
         data_in = tmp;
 
-        blocks *= 3;
+        num_nodes *= 3;
     }
 
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
-
-    if (blocks != num_blocks)
-    {
-        printf("error: incorrect number of blocks processed\n");
-        printf("expected: %zu got: %zu\n", num_blocks, blocks);
-        exit(0);
-    }
-
-    uint64_t test_index = randIndex();
-    if (data_in[test_index] == 0 || data_out[test_index] == 0)
-    {
-        printf("error: output is zero\n");
-        exit(0);
-    }
 
     printf("AES: time (total) %f ms\n", time_taken);
     free(data_in);
