@@ -28,7 +28,7 @@ void innerLoop(
 void DPFGen(EVP_CIPHER_CTX *prfKey0,
             EVP_CIPHER_CTX *prfKey1,
             EVP_CIPHER_CTX *prfKey2,
-            int size,
+            size_t size,
             uint64_t index,
             uint128_t msg,
             unsigned char *k0,

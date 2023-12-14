@@ -13,7 +13,7 @@ void DPFGen(
 	EVP_CIPHER_CTX *prfKey0,
 	EVP_CIPHER_CTX *prfKey1,
 	EVP_CIPHER_CTX *prfKey2,
-	int size,
+	size_t size,
 	uint64_t index,
 	uint128_t msg,
 	unsigned char *kA,
@@ -48,7 +48,7 @@ void DPFGen(
 	parentA = seedA;
 	parentB = seedB;
 
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
 		// expand the starting seeds of each party
 		PRFEval(prfKey0, &parentA, &sA0);
@@ -205,7 +205,7 @@ void DPFFullDomainEval(
 		else
 		{
 			batch_size = max_batch_size;
-			num_batches = num_nodes / batch_size;
+			num_batches = num_nodes / max_batch_size;
 		}
 
 		offset = 0;

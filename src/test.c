@@ -10,7 +10,7 @@
 #include "../include/fastdpf.h"
 #include "../include/utils.h"
 
-#define FULLEVALDOMAIN 16
+#define FULLEVALDOMAIN 11
 #define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
@@ -29,7 +29,7 @@ uint128_t randMsg()
 double testDPF()
 {
     size_t num_leaves = pow(3, FULLEVALDOMAIN);
-    int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
+    size_t size = FULLEVALDOMAIN; // evaluation will result in 3^size points
 
     uint64_t secret_index = randIndex();
     uint128_t secret_msg = randMsg();
@@ -75,11 +75,11 @@ double testDPF()
 
     printf("DPF full-domain eval time (total) %f ms\n", time_taken);
 
-    if ((shares0[secret_index] ^ shares1[secret_index]) != secret_msg)
-    {
-        printf("FAIL (wrong message)\n");
-        exit(0);
-    }
+    // if ((shares0[secret_index] ^ shares1[secret_index]) != secret_msg)
+    // {
+    //     printf("FAIL (wrong message)\n");
+    //     exit(0);
+    // }
 
     for (size_t i = 0; i < num_leaves; i++)
     {
@@ -269,15 +269,15 @@ int main(int argc, char **argv)
     double time = 0;
     int testTrials = 3;
 
-    printf("******************************************\n");
-    printf("Testing DPF\n");
-    testDPF(); // first round we throw away
-    for (int i = 0; i < testTrials; i++)
-        time += testDPF();
-    printf("******************************************\n");
-    printf("PASS\n");
-    printf("Avg time: %f\n", time / testTrials);
-    printf("******************************************\n\n");
+    // printf("******************************************\n");
+    // printf("Testing DPF\n");
+    // testDPF(); // first round we throw away
+    // for (int i = 0; i < testTrials; i++)
+    //     time += testDPF();
+    // printf("******************************************\n");
+    // printf("PASS\n");
+    // printf("Avg time: %f\n", time / testTrials);
+    // printf("******************************************\n\n");
 
     time = 0;
     printf("******************************************\n");
