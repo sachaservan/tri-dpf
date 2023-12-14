@@ -68,10 +68,9 @@ double testDPF()
     clock_t t;
     t = clock();
     DPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, output, kB, size);
+    memcpy(shares1, output, sizeof(uint128_t) * num_leaves);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
-
-    memcpy(shares1, output, sizeof(uint128_t) * num_leaves);
 
     printf("DPF full-domain eval time (total) %f ms\n", time_taken);
 
@@ -153,10 +152,9 @@ double testFastDPF()
     clock_t t;
     t = clock();
     FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, output, kB, size);
+    memcpy(shares1, output, sizeof(uint128_t) * num_leaves);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
-
-    memcpy(shares1, output, sizeof(uint128_t) * num_leaves);
 
     printf("FastDPF full-domain eval time (total) %f ms\n", time_taken);
 
@@ -187,6 +185,8 @@ double testFastDPF()
 
     free(kA);
     free(kB);
+    free(output);
+    free(cache);
     free(shares0);
     free(shares1);
     printf("DONE\n\n");

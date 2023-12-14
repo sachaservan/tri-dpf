@@ -3,7 +3,7 @@
 #include "../include/utils.h"
 #include <openssl/rand.h>
 
-#define LOG_BATCH_SIZE 5 // operate in smallish batches to maximize cache hits
+#define LOG_BATCH_SIZE 6 // operate in smallish batches to maximize cache hits
 
 // Naming conventions:
 // - A,B refer to shares given to parties A and B
