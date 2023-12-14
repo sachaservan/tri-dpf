@@ -3,6 +3,8 @@
 #include "../include/utils.h"
 #include <openssl/rand.h>
 
+#define LOG_BATCH_SIZE 5 // operate in smallish batches to maximize cache hits
+
 // Naming conventions:
 // - A,B refer to shares given to parties A and B
 // - 0,1,2 refer to the branch index in the ternary tree
@@ -161,107 +163,81 @@ void DPFGen(
 	memcpy(&kB[16 * 2 * size + 16], &sCW2[0], size * 16);
 }
 
-void innerLoop(
-	EVP_CIPHER_CTX *prfKey0,
-	EVP_CIPHER_CTX *prfKey1,
-	EVP_CIPHER_CTX *prfKey2,
-	size_t batch_size,
-	size_t num_batches,
-	size_t num_nodes,
-	uint128_t cw0,
-	uint128_t cw1,
-	uint128_t cw2,
-	uint128_t *parents,
-	uint128_t *new_parents)
-{
-
-	uint8_t cb;
-	size_t idx0, idx1, idx2;
-	size_t offset = 0;
-	for (size_t b = 0; b < num_batches; b++)
-	{
-		PRFBatchEval(prfKey0, &parents[offset], &new_parents[offset], batch_size);
-		PRFBatchEval(prfKey1, &parents[offset], &new_parents[num_nodes + offset], batch_size);
-		PRFBatchEval(prfKey2, &parents[offset], &new_parents[(num_nodes * 2) + offset], batch_size);
-
-		idx0 = offset;
-		idx1 = num_nodes + offset;
-		idx2 = (num_nodes * 2) + offset;
-
-		while (idx0 < offset + batch_size)
-		{
-			cb = parents[idx0] & 1; // gets the LSB of the parent
-			new_parents[idx0] ^= (cb * cw0);
-			new_parents[idx1] ^= (cb * cw1);
-			new_parents[idx2] ^= (cb * cw2);
-
-			idx0++;
-			idx1++;
-			idx2++;
-		}
-
-		offset += batch_size;
-	}
-}
-
 // evaluates the full DPF domain; much faster than
 // batching the evaluation points since each level of the DPF tree
 // is only expanded once.
-unsigned char *DPFFullDomainEval(
+void DPFFullDomainEval(
 	EVP_CIPHER_CTX *prfKey0,
 	EVP_CIPHER_CTX *prfKey1,
 	EVP_CIPHER_CTX *prfKey2,
+	uint128_t *cache,
+	uint128_t *output,
 	const uint8_t *k,
 	const uint8_t size)
 {
 	// full_eval_size = pow(3, size);
 	const size_t num_leaves = pow(3, size);
 
-	uint128_t *parents = malloc(sizeof(uint128_t) * num_leaves);
-	uint128_t *new_parents = malloc(sizeof(uint128_t) * num_leaves);
-	uint128_t *tmp;
-
-	memcpy(&parents[0], &k[0], 16); // parents[0] is the start seed
+	memcpy(&output[0], &k[0], 16); // parents[0] is the start seed
 	const uint128_t *sCW0 = (uint128_t *)&k[16];
 	const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
 	const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
 
-	size_t idx0;
+	// inner loop variables related to node expansion
+	// and correction word application
+	uint128_t *tmp;
+	size_t idx0, idx1, idx2;
 	uint8_t cb = 0;
 
+	// batching variables related to chunking of inner loop processing
+	// for the purpose of maximizing cache hits
+	size_t max_batch_size = pow(3, LOG_BATCH_SIZE);
+	size_t batch, num_batches, batch_size, offset;
+
 	size_t num_nodes = 1;
-	size_t b, offset;
 	for (uint8_t i = 0; i < size; i++)
 	{
-
-		size_t batch_size = pow(3, 5);
-		size_t num_batches = num_nodes / batch_size;
-		if (i < 6)
+		if (i < LOG_BATCH_SIZE)
 		{
 			batch_size = num_nodes;
 			num_batches = 1;
 		}
+		else
+		{
+			batch_size = max_batch_size;
+			num_batches = num_nodes / batch_size;
+		}
 
-		innerLoop(
-			prfKey0,
-			prfKey1,
-			prfKey2,
-			batch_size,
-			num_batches,
-			num_nodes,
-			sCW0[i],
-			sCW1[i],
-			sCW2[i],
-			parents,
-			new_parents);
+		offset = 0;
+		for (batch = 0; batch < num_batches; batch++)
+		{
+			PRFBatchEval(prfKey0, &output[offset], &cache[offset], batch_size);
+			PRFBatchEval(prfKey1, &output[offset], &cache[num_nodes + offset], batch_size);
+			PRFBatchEval(prfKey2, &output[offset], &cache[(num_nodes * 2) + offset], batch_size);
 
-		tmp = parents;
-		parents = new_parents;
-		new_parents = tmp;
+			idx0 = offset;
+			idx1 = num_nodes + offset;
+			idx2 = (num_nodes * 2) + offset;
+
+			while (idx0 < offset + batch_size)
+			{
+				cb = output[idx0] & 1; // gets the LSB of the parent
+				cache[idx0] ^= (cb * sCW0[i]);
+				cache[idx1] ^= (cb * sCW1[i]);
+				cache[idx2] ^= (cb * sCW2[i]);
+
+				idx0++;
+				idx1++;
+				idx2++;
+			}
+
+			offset += batch_size;
+		}
+
+		tmp = output;
+		output = cache;
+		cache = tmp;
 
 		num_nodes *= 3;
 	}
-
-	free(new_parents);
-	return (unsigned char *)parents;
 }

@@ -3,6 +3,8 @@
 #include "../include/utils.h"
 #include <openssl/rand.h>
 
+#define LOG_BATCH_SIZE 5 // operate in smallish batches to maximize cache hits
+
 // Naming conventions:
 // - A,B refer to shares given to parties A and B
 // - 0,1,2 refer to the branch index in the ternary tree
@@ -174,82 +176,115 @@ void FastDPFGen(
 // evaluates the full DPF domain; much faster than
 // batching the evaluation points since each level of the DPF tree
 // is only expanded once.
-unsigned char *FastDPFFullDomainEval(
+void FastDPFFullDomainEval(
     EVP_CIPHER_CTX *prfKey0,
     EVP_CIPHER_CTX *prfKey1,
     EVP_CIPHER_CTX *prfKey2,
+    uint128_t *cache,
+    uint128_t *output,
     const unsigned char *k,
     const uint8_t size)
 {
 
     // full_eval_size = pow(3, size);
     const size_t num_leaves = pow(3, size);
-    uint128_t *parents = malloc(sizeof(uint128_t) * num_leaves);
-    uint128_t *new_parents = malloc(sizeof(uint128_t) * num_leaves);
-    uint128_t *tmp;
 
-    memcpy(&parents[0], &k[0], 16); // parents[0] is the start seed
+    memcpy(&output[0], &k[0], 16); // parents[0] is the start seed
     const uint128_t *sCW0 = (uint128_t *)&k[16];
     const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
     const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
 
+    // inner loop variables related to node expansion
+    // and correction word application
+    uint128_t *tmp;
     size_t idx0, idx1, idx2;
+    uint8_t cb = 0;
+
+    // batching variables related to chunking of inner loop processing
+    // for the purpose of maximizing cache hits
+    size_t max_batch_size = pow(3, LOG_BATCH_SIZE);
+    size_t batch, num_batches, batch_size, offset;
+
     size_t num_nodes = 1;
-
-    uint8_t cb;
-
     for (uint8_t i = 0; i < size - 1; i++)
     {
 
-        PRFBatchEval(prfKey0, parents, new_parents, num_nodes);
-        PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-
-        idx0 = 0;
-        idx1 = num_nodes;
-        idx2 = (num_nodes * 2);
-
-        while (idx0 < num_nodes)
+        if (i < LOG_BATCH_SIZE)
         {
-            cb = parents[idx0] & 1; // gets the LSB of the parent
+            batch_size = num_nodes;
+            num_batches = 1;
+        }
+        else
+        {
+            batch_size = max_batch_size;
+            num_batches = num_nodes / batch_size;
+        }
 
-            // new_parents[2] = (x ^ H(x) ^ H'(x)) ^ cb*sCW2[i]
-            new_parents[idx2] = parents[idx0] ^ new_parents[idx0] ^ new_parents[idx1] ^ (cb * sCW2[i]);
-            new_parents[idx0] ^= (cb * sCW0[i]);
-            new_parents[idx1] ^= (cb * sCW1[i]);
+        offset = 0;
+        for (batch = 0; batch < num_batches; batch++)
+        {
+            PRFBatchEval(prfKey0, &output[offset], &cache[offset], batch_size);
+            PRFBatchEval(prfKey1, &output[offset], &cache[num_nodes + offset], batch_size);
+
+            idx0 = offset;
+            idx1 = num_nodes + offset;
+            idx2 = (num_nodes * 2) + offset;
+
+            while (idx0 < offset + batch_size)
+            {
+                cb = output[idx0] & 1; // gets the LSB of the parent
+
+                // new_parents[2] = (x ^ H(x) ^ H'(x)) ^ cb*sCW2[i]
+                cache[idx2] = output[idx0] ^ cache[idx0] ^ cache[idx1] ^ (cb * sCW2[i]);
+                cache[idx0] ^= (cb * sCW0[i]);
+                cache[idx1] ^= (cb * sCW1[i]);
+
+                idx0++;
+                idx1++;
+                idx2++;
+            }
+
+            offset += batch_size;
+        }
+
+        tmp = output;
+        output = cache;
+        cache = tmp;
+
+        num_nodes *= 3;
+    }
+
+    // last level requires hashing the regular way
+    batch_size = max_batch_size;
+    num_batches = num_nodes / batch_size;
+    offset = 0;
+    for (batch = 0; batch < num_batches; batch++)
+    {
+        PRFBatchEval(prfKey0, &output[offset], &cache[offset], batch_size);
+        PRFBatchEval(prfKey1, &output[offset], &cache[num_nodes + offset], batch_size);
+        PRFBatchEval(prfKey2, &output[offset], &cache[(num_nodes * 2) + offset], batch_size);
+
+        idx0 = offset;
+        idx1 = num_nodes + offset;
+        idx2 = (num_nodes * 2) + offset;
+
+        while (idx0 < offset + batch_size)
+        {
+            cb = output[idx0] & 1; // gets the LSB of the parent
+
+            cache[idx0] ^= (cb * sCW0[size - 1]);
+            cache[idx1] ^= (cb * sCW1[size - 1]);
+            cache[idx2] ^= (cb * sCW2[size - 1]);
 
             idx0++;
             idx1++;
             idx2++;
         }
 
-        tmp = parents;
-        parents = new_parents;
-        new_parents = tmp;
-
-        num_nodes *= 3;
+        offset += batch_size;
     }
 
-    // last level requires hashing the regular way
-    PRFBatchEval(prfKey0, parents, new_parents, num_nodes);
-    PRFBatchEval(prfKey1, parents, &new_parents[num_nodes], num_nodes);
-    PRFBatchEval(prfKey2, parents, &new_parents[(num_nodes * 2)], num_nodes);
-
-    idx0 = 0;
-    idx1 = num_nodes;
-    idx2 = (num_nodes * 2);
-    while (idx0 < num_nodes)
-    {
-        cb = parents[idx0] & 1; // gets the LSB of the parent
-
-        new_parents[idx0] ^= (cb * sCW0[size - 1]);
-        new_parents[idx1] ^= (cb * sCW1[size - 1]);
-        new_parents[idx2] ^= (cb * sCW2[size - 1]);
-
-        idx0++;
-        idx1++;
-        idx2++;
-    }
-
-    free(parents);
-    return (unsigned char *)new_parents;
+    tmp = output;
+    output = cache;
+    cache = tmp;
 }
