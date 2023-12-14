@@ -48,12 +48,11 @@ Testing DPF (without half-tree optimization)
 DPF full-domain eval time (total) 18.515000 ms
 ******************************************
 Testing Fast DPF (with half-tree optimization)
-DPF full-domain eval time (total) 14.641000 ms
+DPF full-domain eval time (total) 16.751000 ms
 ******************************************
 ******************************************
 Benchmarking AES
-WITHOUT half-tree optimization: time (total) 13.507000 ms
-WITH half-tree optimization:    time (total) 9.064000 ms
+AES: time (total) 13.485000 ms
 ******************************************
 ```
 
