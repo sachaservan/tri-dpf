@@ -10,7 +10,7 @@
 #include "../include/fastdpf.h"
 #include "../include/utils.h"
 
-#define FULLEVALDOMAIN 14
+#define FULLEVALDOMAIN 17
 #define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
@@ -53,7 +53,6 @@ double testDPF()
 
     uint128_t *shares0 = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *shares1 = malloc(sizeof(uint128_t) * num_leaves);
-    uint128_t *output = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *cache = malloc(sizeof(uint128_t) * num_leaves);
 
     //************************************************
@@ -62,13 +61,11 @@ double testDPF()
     printf("Testing full-domain evaluation optimization\n");
     //************************************************
 
-    DPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, output, kA, size);
-    memcpy(shares0, output, sizeof(uint128_t) * num_leaves);
+    DPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, shares0, kA, size);
 
     clock_t t;
     t = clock();
-    DPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, output, kB, size);
-    memcpy(shares1, output, sizeof(uint128_t) * num_leaves);
+    DPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, shares1, kB, size);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
@@ -103,7 +100,6 @@ double testDPF()
     free(kB);
     free(shares0);
     free(shares1);
-    free(output);
     free(cache);
     printf("DONE\n\n");
 
@@ -135,7 +131,6 @@ double testFastDPF()
 
     uint128_t *shares0 = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *shares1 = malloc(sizeof(uint128_t) * num_leaves);
-    uint128_t *output = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *cache = malloc(sizeof(uint128_t) * num_leaves);
 
     FastDPFGen(prfKey0, prfKey1, prfKey2, size, secret_index, secret_msg, kA, kB);
@@ -146,13 +141,11 @@ double testFastDPF()
     printf("Testing full-domain evaluation optimization\n");
     //************************************************
 
-    FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, output, kA, size);
-    memcpy(shares0, output, sizeof(uint128_t) * num_leaves);
+    FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, shares0, kA, size);
 
     clock_t t;
     t = clock();
-    FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, output, kB, size);
-    memcpy(shares1, output, sizeof(uint128_t) * num_leaves);
+    FastDPFFullDomainEval(prfKey0, prfKey1, prfKey2, cache, shares1, kB, size);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
@@ -185,7 +178,6 @@ double testFastDPF()
 
     free(kA);
     free(kB);
-    free(output);
     free(cache);
     free(shares0);
     free(shares1);
@@ -211,20 +203,17 @@ double benchmarkAES()
     EVP_CIPHER_CTX *prfKey1 = PRFKeyGen((uint8_t *)&key1);
     EVP_CIPHER_CTX *prfKey2 = PRFKeyGen((uint8_t *)&key2);
 
-    uint128_t *parents = malloc(sizeof(uint128_t) * num_blocks);
-    uint128_t *new_parents = malloc(sizeof(uint128_t) * num_blocks);
+    uint128_t *data_in = malloc(sizeof(uint128_t) * num_blocks * 3);
+    uint128_t *data_out = malloc(sizeof(uint128_t) * num_blocks * 3);
+    uint128_t *data_tmp = malloc(sizeof(uint128_t) * num_blocks * 3);
     uint128_t *tmp;
 
     // fill with unique data
-    for (int i = 0; i < num_blocks; i++)
-    {
-        parents[i] = (uint128_t)i;
-        new_parents[i] = (uint128_t)i * 5;
-    }
+    for (size_t i = 0; i < num_blocks * 3; i++)
+        data_tmp[i] = (uint128_t)i;
 
     // make the input data pseudorandom for correct timing
-    PRFBatchEval(prfKey1, parents, new_parents, num_blocks);
-    PRFBatchEval(prfKey2, new_parents, parents, num_blocks);
+    PRFBatchEval(prfKey0, data_tmp, data_in, num_blocks * 3);
 
     //************************************************
     // Benchmark AES encryption time required in DPF loop
@@ -233,15 +222,15 @@ double benchmarkAES()
     clock_t t;
     t = clock();
     size_t blocks = 1;
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
     {
-        PRFBatchEval(prfKey0, parents, new_parents, blocks);
-        PRFBatchEval(prfKey1, parents, new_parents, blocks);
-        PRFBatchEval(prfKey2, parents, new_parents, blocks);
+        PRFBatchEval(prfKey0, data_in, data_out, blocks);
+        PRFBatchEval(prfKey1, data_in, &data_out[blocks], blocks);
+        PRFBatchEval(prfKey2, data_in, &data_out[blocks * 2], blocks);
 
-        tmp = new_parents;
-        new_parents = parents;
-        parents = tmp;
+        tmp = data_out;
+        data_out = data_in;
+        data_in = tmp;
 
         blocks *= 3;
     }
@@ -249,16 +238,24 @@ double benchmarkAES()
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    uint64_t test_index = randIndex();
-    if (parents[test_index] == 0 || new_parents[test_index] == 0)
+    if (blocks != num_blocks)
     {
-        printf("output is zero\n");
+        printf("error: incorrect number of blocks processed\n");
+        printf("expected: %zu got: %zu\n", num_blocks, blocks);
+        exit(0);
+    }
+
+    uint64_t test_index = randIndex();
+    if (data_in[test_index] == 0 || data_out[test_index] == 0)
+    {
+        printf("error: output is zero\n");
         exit(0);
     }
 
     printf("AES: time (total) %f ms\n", time_taken);
-    free(parents);
-    free(new_parents);
+    free(data_in);
+    free(data_out);
+    free(data_tmp);
 
     return time_taken;
 }
