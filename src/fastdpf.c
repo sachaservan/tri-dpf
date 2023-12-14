@@ -186,6 +186,13 @@ void FastDPFFullDomainEval(
     const uint8_t size)
 {
 
+    if (size % 2 == 1)
+    {
+        uint128_t *tmp = cache;
+        cache = output;
+        output = tmp;
+    }
+
     // full_eval_size = pow(3, size);
     const size_t num_leaves = pow(3, size);
 

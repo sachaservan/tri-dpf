@@ -175,10 +175,18 @@ void DPFFullDomainEval(
 	const uint8_t *k,
 	const uint8_t size)
 {
+
+	if (size % 2 == 1)
+	{
+		uint128_t *tmp = cache;
+		cache = output;
+		output = tmp;
+	}
+
 	// full_eval_size = pow(3, size);
 	const size_t num_leaves = pow(3, size);
 
-	memcpy(&output[0], &k[0], 16); // parents[0] is the start seed
+	memcpy(&output[0], &k[0], 16); // output[0] is the start seed
 	const uint128_t *sCW0 = (uint128_t *)&k[16];
 	const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
 	const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
