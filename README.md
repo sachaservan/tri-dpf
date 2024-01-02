@@ -58,12 +58,12 @@ AES: time (total) 13.485000 ms
 
 ## ⚠️ Important Warning
 
-<b>This implementation of is intended for _research purposes only_. The code has NOT been vetted by security experts.
+<b>This implementation is intended for _research purposes only_. The code has NOT been vetted by security experts.
 As such, no portion of the code should be used in any real-world or production setting!</b>
 
 ## License
 
-Copyright © 2023 Sacha Servan-Schreiber
+Copyright © 2024 Sacha Servan-Schreiber
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
