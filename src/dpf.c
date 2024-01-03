@@ -184,7 +184,7 @@ void DPFFullDomainEval(
 	}
 
 	// full_eval_size = pow(3, size);
-	const size_t num_leaves = pow(3, size);
+	const size_t num_leaves = ipow(3, size);
 
 	memcpy(&output[0], &k[0], 16); // output[0] is the start seed
 	const uint128_t *sCW0 = (uint128_t *)&k[16];
@@ -199,7 +199,7 @@ void DPFFullDomainEval(
 
 	// batching variables related to chunking of inner loop processing
 	// for the purpose of maximizing cache hits
-	size_t max_batch_size = pow(3, LOG_BATCH_SIZE);
+	size_t max_batch_size = ipow(3, LOG_BATCH_SIZE);
 	size_t batch, num_batches, batch_size, offset;
 
 	size_t num_nodes = 1;

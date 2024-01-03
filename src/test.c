@@ -11,7 +11,7 @@
 #include "../include/utils.h"
 
 #define FULLEVALDOMAIN 14
-#define MAXRANDINDEX pow(3, FULLEVALDOMAIN)
+#define MAXRANDINDEX ipow(3, FULLEVALDOMAIN)
 
 uint64_t randIndex()
 {
@@ -28,7 +28,7 @@ uint128_t randMsg()
 
 double testDPF()
 {
-    size_t num_leaves = pow(3, FULLEVALDOMAIN);
+    size_t num_leaves = ipow(3, FULLEVALDOMAIN);
     size_t size = FULLEVALDOMAIN; // evaluation will result in 3^size points
 
     uint64_t secret_index = randIndex();
@@ -108,7 +108,7 @@ double testDPF()
 
 double testFastDPF()
 {
-    size_t num_leaves = pow(3, FULLEVALDOMAIN);
+    size_t num_leaves = ipow(3, FULLEVALDOMAIN);
     int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
 
     uint64_t secret_index = randIndex();
@@ -188,7 +188,7 @@ double testFastDPF()
 
 double benchmarkAES()
 {
-    size_t num_leaves = pow(3, FULLEVALDOMAIN);
+    size_t num_leaves = ipow(3, FULLEVALDOMAIN);
     size_t size = FULLEVALDOMAIN;
 
     uint128_t key0;
