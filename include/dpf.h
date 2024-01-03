@@ -1,7 +1,6 @@
 #ifndef _DPF
 #define _DPF
 
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
