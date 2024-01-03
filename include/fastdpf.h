@@ -1,7 +1,6 @@
 #ifndef _FASTDPF
 #define _FASTDPF
 
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
