@@ -1,6 +1,7 @@
 #include "../include/dpf.h"
 #include "../include/prf.h"
 #include "../include/utils.h"
+
 #include <openssl/rand.h>
 
 #define LOG_BATCH_SIZE 6 // operate in smallish batches to maximize cache hits
