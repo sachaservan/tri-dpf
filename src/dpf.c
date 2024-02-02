@@ -250,3 +250,86 @@ void DPFFullDomainEval(
 		num_nodes *= 3;
 	}
 }
+
+// like full domain eval but xors all siblings at each level
+void DPFDoernerShelatEval(
+	EVP_CIPHER_CTX *prfKey0,
+	EVP_CIPHER_CTX *prfKey1,
+	EVP_CIPHER_CTX *prfKey2,
+	uint128_t *cache,
+	uint128_t *output,
+	const uint8_t *k,
+	const uint8_t size)
+{
+
+	if (size % 2 == 1)
+	{
+		uint128_t *tmp = cache;
+		cache = output;
+		output = tmp;
+	}
+
+	// full_eval_size = pow(3, size);
+	const size_t num_leaves = ipow(3, size);
+
+	memcpy(&output[0], &k[0], 16); // output[0] is the start seed
+	const uint128_t *sCW0 = (uint128_t *)&k[16];
+	const uint128_t *sCW1 = (uint128_t *)&k[16 * size + 16];
+	const uint128_t *sCW2 = (uint128_t *)&k[16 * 2 * size + 16];
+
+	uint128_t left_xor;
+	uint128_t middle_xor;
+	uint128_t right_xor;
+
+	// inner loop variables related to node expansion
+	// and correction word application
+	uint128_t *tmp;
+	size_t idx0, idx1, idx2;
+	uint8_t cb = 0;
+
+	size_t num_nodes = 1;
+	for (uint8_t i = 0; i < size; i++)
+	{
+
+		PRFBatchEval(prfKey0, output, &cache[0], num_nodes);
+		PRFBatchEval(prfKey1, output, &cache[num_nodes], num_nodes);
+		PRFBatchEval(prfKey2, output, &cache[(num_nodes * 2)], num_nodes);
+
+		idx0 = 0;
+		idx1 = num_nodes;
+		idx2 = (num_nodes * 2);
+
+		// XOR all the left, middle, and right siblings together
+		left_xor = 0;
+		middle_xor = 0;
+		right_xor = 0;
+		for (size_t j = 0; j < 3 * num_nodes; j += 3)
+		{
+			left_xor ^= cache[j + 0];
+			middle_xor ^= cache[j + 1];
+			right_xor ^= cache[j + 2];
+
+			// At this point, the above values can be used to
+			// instantiate the Doerner-shelat protocol by engaging in
+			// a one-out-of-three OT protocol to get the correction words...
+		}
+
+		while (idx0 < num_nodes)
+		{
+			cb = output[idx0] & 1; // gets the LSB of the parent
+			cache[idx0] ^= (cb * sCW0[i]);
+			cache[idx1] ^= (cb * sCW1[i]);
+			cache[idx2] ^= (cb * sCW2[i]);
+
+			idx0++;
+			idx1++;
+			idx2++;
+		}
+
+		tmp = output;
+		output = cache;
+		cache = tmp;
+
+		num_nodes *= 3;
+	}
+}

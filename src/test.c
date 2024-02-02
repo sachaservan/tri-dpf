@@ -194,6 +194,67 @@ double testFastDPF()
     return time_taken;
 }
 
+double benchmarkDoernerShelatFullEval()
+{
+    size_t num_leaves = ipow(3, FULLEVALDOMAIN);
+    int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
+
+    uint64_t secret_index = randIndex();
+    uint128_t secret_msg = randMsg();
+
+    uint8_t *key0 = malloc(sizeof(uint128_t));
+    uint8_t *key1 = malloc(sizeof(uint128_t));
+    uint8_t *key2 = malloc(sizeof(uint128_t));
+
+    RAND_bytes(key0, sizeof(uint128_t));
+    RAND_bytes(key1, sizeof(uint128_t));
+    RAND_bytes(key2, sizeof(uint128_t));
+
+    EVP_CIPHER_CTX *prf_key0 = PRFKeyGen(key0);
+    EVP_CIPHER_CTX *prf_key1 = PRFKeyGen(key1);
+    EVP_CIPHER_CTX *prf_key2 = PRFKeyGen(key2);
+
+    unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
+    unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
+
+    uint128_t *shares0 = malloc(sizeof(uint128_t) * num_leaves);
+    uint128_t *shares1 = malloc(sizeof(uint128_t) * num_leaves);
+    uint128_t *ext_shares0 = malloc(sizeof(uint128_t) * num_leaves * OUTPUTEXT);
+    uint128_t *ext_shares1 = malloc(sizeof(uint128_t) * num_leaves * OUTPUTEXT);
+    uint128_t *cache = malloc(sizeof(uint128_t) * num_leaves);
+
+    DPFGen(prf_key0, prf_key1, prf_key2, size, secret_index, secret_msg, kA, kB);
+
+    //************************************************
+    // Test full domain evaluation
+    //************************************************
+    printf("Testing full-domain evaluation with Doerner-shelat\n");
+    //************************************************
+
+    DPFDoernerShelatEval(prf_key0, prf_key1, prf_key2, cache, shares0, kA, size);
+    ExtendOutput(prf_key0, shares0, ext_shares0, num_leaves, num_leaves * OUTPUTEXT);
+
+    clock_t t;
+    t = clock();
+    DPFDoernerShelatEval(prf_key0, prf_key1, prf_key2, cache, shares1, kB, size);
+    ExtendOutput(prf_key0, shares1, ext_shares1, num_leaves, num_leaves * OUTPUTEXT);
+    t = clock() - t;
+    double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
+
+    DestroyPRFKey(prf_key0);
+    DestroyPRFKey(prf_key1);
+    DestroyPRFKey(prf_key2);
+
+    free(kA);
+    free(kB);
+    free(cache);
+    free(shares0);
+    free(shares1);
+    printf("DONE\n\n");
+
+    return time_taken;
+}
+
 double benchmarkGen()
 {
     size_t num_leaves = ipow(3, FULLEVALDOMAIN);
@@ -313,7 +374,7 @@ int main(int argc, char **argv)
 
     time = 0;
     printf("******************************************\n");
-    printf("Testing Fast DPF\n");
+    printf("Testing FastDPF.FullEval\n");
     testFastDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
         time += testFastDPF();
@@ -328,6 +389,17 @@ int main(int argc, char **argv)
     benchmarkGen(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
         time += benchmarkGen();
+    printf("******************************************\n");
+    printf("PASS\n");
+    printf("Avg time: %0.4f ms\n", time / testTrials);
+    printf("******************************************\n\n");
+
+    time = 0;
+    printf("******************************************\n");
+    printf("Benchmarking DPF.DoernerShelatFullEval\n");
+    benchmarkDoernerShelatFullEval(); // first round we throw away
+    for (int i = 0; i < testTrials; i++)
+        time += benchmarkDoernerShelatFullEval();
     printf("******************************************\n");
     printf("PASS\n");
     printf("Avg time: %0.4f ms\n", time / testTrials);

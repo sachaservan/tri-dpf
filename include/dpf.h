@@ -47,6 +47,15 @@ void FastDPFFullDomainEval(
     const unsigned char *k,
     const uint8_t size);
 
+void DPFDoernerShelatEval(
+    EVP_CIPHER_CTX *prfKey0,
+    EVP_CIPHER_CTX *prfKey1,
+    EVP_CIPHER_CTX *prfKey2,
+    uint128_t *cache,
+    uint128_t *output,
+    const uint8_t *k,
+    const uint8_t size);
+
 int ExtendOutput(
     EVP_CIPHER_CTX *prfKey,
     uint128_t *output,
