@@ -1,16 +1,13 @@
-# FastDPF
+# Ternary-tree DPF Implementation
 
 A pure C implementation of Distributed Point Functions (DPFs) with several performance optimizations.
 
 ## 🚧 WORK IN PROGRSS
 
 ### TODOs
-
-- [ ] implement the early termination optimization
 - [ ] reduce key size by dropping one correction word
 
 Optimizations include:
-
 - Ternary instead of a binary tree (increases communication slightly but improves evaluation performance)
 - Using batched AES for fast PRF evaluation with AES-NI
 - Full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707)
