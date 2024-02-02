@@ -186,6 +186,44 @@ double testFastDPF()
     return time_taken;
 }
 
+double benchmarkGen()
+{
+    size_t num_leaves = ipow(3, FULLEVALDOMAIN);
+    size_t size = FULLEVALDOMAIN; // evaluation will result in 3^size points
+
+    uint64_t secret_index = randIndex();
+    uint128_t secret_msg = randMsg();
+
+    uint8_t *key0 = malloc(sizeof(uint128_t));
+    uint8_t *key1 = malloc(sizeof(uint128_t));
+    uint8_t *key2 = malloc(sizeof(uint128_t));
+
+    RAND_bytes(key0, sizeof(uint128_t));
+    RAND_bytes(key1, sizeof(uint128_t));
+    RAND_bytes(key2, sizeof(uint128_t));
+
+    EVP_CIPHER_CTX *prfKey0 = PRFKeyGen(key0);
+    EVP_CIPHER_CTX *prfKey1 = PRFKeyGen(key1);
+    EVP_CIPHER_CTX *prfKey2 = PRFKeyGen(key2);
+
+    unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
+    unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
+
+    clock_t t;
+    t = clock();
+    DPFGen(prfKey0, prfKey1, prfKey2, size, secret_index, secret_msg, kA, kB);
+    t = clock() - t;
+    double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
+
+    free(key0);
+    free(key1);
+    free(key2);
+    free(kA);
+    free(kB);
+
+    return time_taken;
+}
+
 double benchmarkAES()
 {
     size_t num_leaves = ipow(3, FULLEVALDOMAIN);
@@ -253,13 +291,13 @@ int main(int argc, char **argv)
     int testTrials = 3;
 
     printf("******************************************\n");
-    printf("Testing DPF\n");
+    printf("Testing DPF.FullEval\n");
     testDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
         time += testDPF();
     printf("******************************************\n");
     printf("PASS\n");
-    printf("Avg time: %f\n", time / testTrials);
+    printf("Avg time for DPF.FullEval: %0.2f ms\n", time / testTrials);
     printf("******************************************\n\n");
 
     time = 0;
@@ -270,7 +308,18 @@ int main(int argc, char **argv)
         time += testFastDPF();
     printf("******************************************\n");
     printf("PASS\n");
-    printf("Avg time: %f\n", time / testTrials);
+    printf("Avg time for DPF.FullEval: %0.2f ms\n", time / testTrials);
+    printf("******************************************\n\n");
+
+    time = 0;
+    printf("******************************************\n");
+    printf("Benchmarking DPF.Gen\n");
+    benchmarkGen(); // first round we throw away
+    for (int i = 0; i < testTrials; i++)
+        time += benchmarkGen();
+    printf("******************************************\n");
+    printf("PASS\n");
+    printf("Avg time: %0.4f ms\n", time / testTrials);
     printf("******************************************\n\n");
 
     time = 0;
@@ -281,6 +330,6 @@ int main(int argc, char **argv)
         time += benchmarkAES();
     printf("******************************************\n");
     printf("PASS\n");
-    printf("Avg time: %f\n", time / testTrials);
+    printf("Avg time: %0.2f ms\n", time / testTrials);
     printf("******************************************\n\n");
 }
