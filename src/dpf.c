@@ -1,6 +1,6 @@
-#include "../include/dpf.h"
-#include "../include/prf.h"
-#include "../include/utils.h"
+#include "dpf.h"
+#include "prf.h"
+#include "utils.h"
 
 #include <openssl/rand.h>
 

@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
-#include "../include/prf.h"
-#include "../include/dpf.h"
-#include "../include/utils.h"
+#include "prf.h"
+#include "dpf.h"
+#include "utils.h"
 
 // extends the output by the provided factor using the PRG
 int ExtendOutput(

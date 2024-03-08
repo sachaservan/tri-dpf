@@ -1,5 +1,5 @@
-#include "../include/dpf.h"
-#include "../include/prf.h"
+#include "dpf.h"
+#include "prf.h"
 
 #include <openssl/rand.h>
 #include <openssl/conf.h>
