@@ -1,17 +1,11 @@
 # Ternary-tree DPF Implementation
 
-A pure C implementation of Distributed Point Functions (DPFs) with several performance optimizations.
-
-## 🚧 WORK IN PROGRSS
-
-### TODOs
-- [ ] reduce key size by dropping one correction word
+A simple C implementation of Distributed Point Functions (DPFs) with several performance optimizations.
 
 Optimizations include:
-- Ternary instead of a binary tree (increases communication slightly but improves evaluation performance)
-- Using batched AES for fast PRF evaluation with AES-NI
-- Full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707)
-- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf)
+- Ternary instead of a binary tree (increases communication slightly but improves evaluation performance).
+- Using batched AES for fast PRF evaluation with AES-NI.
+- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\% in the ternary case. 
 
 ## Dependencies
 
@@ -34,6 +28,13 @@ Optimizations include:
 ```
 cd src && make && ./test
 ```
+
+
+## Possible extensions (TODOs):
+- Arbitrary output size and full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707).
+- Better code structure (use structs to store DPF keys, better management of PRF keys).
+- Serialization for DPF keys.
+
 
 #### Performance on M1 Macbook Pro
 
