@@ -7,8 +7,15 @@
 typedef __int128 int128_t;
 typedef unsigned __int128 uint128_t;
 
-EVP_CIPHER_CTX *PRFKeyGen(uint8_t *key);
-void DestroyPRFKey(EVP_CIPHER_CTX *ctx);
+struct PRFKeys
+{
+    EVP_CIPHER_CTX *prf_key0;
+    EVP_CIPHER_CTX *prf_key1;
+    EVP_CIPHER_CTX *prf_key2;
+};
+
+void PRFKeyGen(struct PRFKeys *prf_keys);
+void DestroyPRFKey(struct PRFKeys *prf_keys);
 
 // XOR with input to prevent inversion using Davies–Meyer construction
 static inline void PRFEval(EVP_CIPHER_CTX *ctx, uint128_t *input, uint128_t *outputs)

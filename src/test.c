@@ -5,9 +5,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
-#include "../include/prf.h"
-#include "../include/dpf.h"
-#include "../include/utils.h"
+
+#include "prf.h"
+#include "dpf.h"
+#include "utils.h"
 
 #define FULLEVALDOMAIN 14
 #define OUTPUTEXT 2
@@ -34,22 +35,13 @@ double testDPF()
     uint64_t secret_index = randIndex();
     uint128_t secret_msg = randMsg();
 
-    uint8_t *key0 = malloc(sizeof(uint128_t));
-    uint8_t *key1 = malloc(sizeof(uint128_t));
-    uint8_t *key2 = malloc(sizeof(uint128_t));
-
-    RAND_bytes(key0, sizeof(uint128_t));
-    RAND_bytes(key1, sizeof(uint128_t));
-    RAND_bytes(key2, sizeof(uint128_t));
-
-    EVP_CIPHER_CTX *prf_key0 = PRFKeyGen(key0);
-    EVP_CIPHER_CTX *prf_key1 = PRFKeyGen(key1);
-    EVP_CIPHER_CTX *prf_key2 = PRFKeyGen(key2);
+    struct PRFKeys *prf_keys = malloc(sizeof(struct PRFKeys));
+    PRFKeyGen(prf_keys);
 
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
-    DPFGen(prf_key0, prf_key1, prf_key2, size, secret_index, secret_msg, kA, kB);
+    DPFGen(prf_keys, size, secret_index, secret_msg, kA, kB);
 
     uint128_t *shares0 = malloc(sizeof(uint128_t) * num_leaves);
     uint128_t *shares1 = malloc(sizeof(uint128_t) * num_leaves);
@@ -63,13 +55,13 @@ double testDPF()
     printf("Testing full-domain evaluation optimization\n");
     //************************************************
 
-    DPFFullDomainEval(prf_key0, prf_key1, prf_key2, cache, shares0, kA, size);
-    ExtendOutput(prf_key0, shares0, ext_shares0, num_leaves, num_leaves * OUTPUTEXT);
+    DPFFullDomainEval(prf_keys, cache, shares0, kA, size);
+    ExtendOutput(prf_keys, shares0, ext_shares0, num_leaves, num_leaves * OUTPUTEXT);
 
     clock_t t;
     t = clock();
-    DPFFullDomainEval(prf_key0, prf_key1, prf_key2, cache, shares1, kB, size);
-    ExtendOutput(prf_key0, shares1, ext_shares1, num_leaves, num_leaves * OUTPUTEXT);
+    DPFFullDomainEval(prf_keys, cache, shares1, kB, size);
+    ExtendOutput(prf_keys, shares1, ext_shares1, num_leaves, num_leaves * OUTPUTEXT);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
@@ -96,21 +88,20 @@ double testDPF()
         }
     }
 
-    DestroyPRFKey(prf_key0);
-    DestroyPRFKey(prf_key1);
-    DestroyPRFKey(prf_key2);
+    DestroyPRFKey(prf_keys);
 
     free(kA);
     free(kB);
     free(shares0);
     free(shares1);
     free(cache);
+
     printf("DONE\n\n");
 
     return time_taken;
 }
 
-double testFastDPF()
+double testHalfDPF()
 {
     size_t num_leaves = ipow(3, FULLEVALDOMAIN);
     int size = FULLEVALDOMAIN; // evaluation will result in 3^size points
@@ -118,17 +109,8 @@ double testFastDPF()
     uint64_t secret_index = randIndex();
     uint128_t secret_msg = randMsg();
 
-    uint8_t *key0 = malloc(sizeof(uint128_t));
-    uint8_t *key1 = malloc(sizeof(uint128_t));
-    uint8_t *key2 = malloc(sizeof(uint128_t));
-
-    RAND_bytes(key0, sizeof(uint128_t));
-    RAND_bytes(key1, sizeof(uint128_t));
-    RAND_bytes(key2, sizeof(uint128_t));
-
-    EVP_CIPHER_CTX *prf_key0 = PRFKeyGen(key0);
-    EVP_CIPHER_CTX *prf_key1 = PRFKeyGen(key1);
-    EVP_CIPHER_CTX *prf_key2 = PRFKeyGen(key2);
+    struct PRFKeys *prf_keys = malloc(sizeof(struct PRFKeys));
+    PRFKeyGen(prf_keys);
 
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
@@ -139,7 +121,7 @@ double testFastDPF()
     uint128_t *ext_shares1 = malloc(sizeof(uint128_t) * num_leaves * OUTPUTEXT);
     uint128_t *cache = malloc(sizeof(uint128_t) * num_leaves);
 
-    FastDPFGen(prf_key0, prf_key1, prf_key2, size, secret_index, secret_msg, kA, kB);
+    HalfDPFGen(prf_keys, size, secret_index, secret_msg, kA, kB);
 
     //************************************************
     // Test full domain evaluation
@@ -147,17 +129,17 @@ double testFastDPF()
     printf("Testing full-domain evaluation optimization\n");
     //************************************************
 
-    FastDPFFullDomainEval(prf_key0, prf_key1, prf_key2, cache, shares0, kA, size);
-    ExtendOutput(prf_key0, shares0, ext_shares0, num_leaves, num_leaves * OUTPUTEXT);
+    HalfDPFFullDomainEval(prf_keys, cache, shares0, kA, size);
+    ExtendOutput(prf_keys, shares0, ext_shares0, num_leaves, num_leaves * OUTPUTEXT);
 
     clock_t t;
     t = clock();
-    FastDPFFullDomainEval(prf_key0, prf_key1, prf_key2, cache, shares1, kB, size);
-    ExtendOutput(prf_key0, shares1, ext_shares1, num_leaves, num_leaves * OUTPUTEXT);
+    HalfDPFFullDomainEval(prf_keys, cache, shares1, kB, size);
+    ExtendOutput(prf_keys, shares1, ext_shares1, num_leaves, num_leaves * OUTPUTEXT);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    printf("FastDPF full-domain eval time (total) %f ms\n", time_taken);
+    printf("HalfDPF full-domain eval time (total) %f ms\n", time_taken);
 
     if ((shares0[secret_index] ^ shares1[secret_index]) != secret_msg)
     {
@@ -180,15 +162,14 @@ double testFastDPF()
         }
     }
 
-    DestroyPRFKey(prf_key0);
-    DestroyPRFKey(prf_key1);
-    DestroyPRFKey(prf_key2);
+    DestroyPRFKey(prf_keys);
 
     free(kA);
     free(kB);
     free(cache);
     free(shares0);
     free(shares1);
+
     printf("DONE\n\n");
 
     return time_taken;
@@ -202,30 +183,19 @@ double benchmarkGen()
     uint64_t secret_index = randIndex();
     uint128_t secret_msg = randMsg();
 
-    uint8_t *key0 = malloc(sizeof(uint128_t));
-    uint8_t *key1 = malloc(sizeof(uint128_t));
-    uint8_t *key2 = malloc(sizeof(uint128_t));
-
-    RAND_bytes(key0, sizeof(uint128_t));
-    RAND_bytes(key1, sizeof(uint128_t));
-    RAND_bytes(key2, sizeof(uint128_t));
-
-    EVP_CIPHER_CTX *prf_key0 = PRFKeyGen(key0);
-    EVP_CIPHER_CTX *prf_key1 = PRFKeyGen(key1);
-    EVP_CIPHER_CTX *prf_key2 = PRFKeyGen(key2);
+    struct PRFKeys *prf_keys = malloc(sizeof(struct PRFKeys));
+    PRFKeyGen(prf_keys);
 
     unsigned char *kA = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
     unsigned char *kB = malloc(3 * size * sizeof(uint128_t) + sizeof(uint128_t));
 
     clock_t t;
     t = clock();
-    DPFGen(prf_key0, prf_key1, prf_key2, size, secret_index, secret_msg, kA, kB);
+    DPFGen(prf_keys, size, secret_index, secret_msg, kA, kB);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    free(key0);
-    free(key1);
-    free(key2);
+    DestroyPRFKey(prf_keys);
     free(kA);
     free(kB);
 
@@ -237,17 +207,8 @@ double benchmarkAES()
     size_t num_leaves = ipow(3, FULLEVALDOMAIN);
     size_t size = FULLEVALDOMAIN;
 
-    uint128_t key0;
-    uint128_t key1;
-    uint128_t key2;
-
-    RAND_bytes((uint8_t *)&key0, sizeof(uint128_t));
-    RAND_bytes((uint8_t *)&key1, sizeof(uint128_t));
-    RAND_bytes((uint8_t *)&key2, sizeof(uint128_t));
-
-    EVP_CIPHER_CTX *prf_key0 = PRFKeyGen((uint8_t *)&key0);
-    EVP_CIPHER_CTX *prf_key1 = PRFKeyGen((uint8_t *)&key1);
-    EVP_CIPHER_CTX *prf_key2 = PRFKeyGen((uint8_t *)&key2);
+    struct PRFKeys *prf_keys = malloc(sizeof(struct PRFKeys));
+    PRFKeyGen(prf_keys);
 
     uint128_t *data_in = malloc(sizeof(uint128_t) * num_leaves * OUTPUTEXT);
     uint128_t *data_out = malloc(sizeof(uint128_t) * num_leaves * OUTPUTEXT);
@@ -259,7 +220,7 @@ double benchmarkAES()
         data_tmp[i] = (uint128_t)i;
 
     // make the input data pseudorandom for correct timing
-    PRFBatchEval(prf_key0, data_tmp, data_in, num_leaves * OUTPUTEXT);
+    PRFBatchEval(prf_keys->prf_key0, data_tmp, data_in, num_leaves * OUTPUTEXT);
 
     //************************************************
     // Benchmark AES encryption time required in DPF loop
@@ -270,9 +231,9 @@ double benchmarkAES()
     size_t num_nodes = 1;
     for (size_t i = 0; i < size; i++)
     {
-        PRFBatchEval(prf_key0, data_in, data_out, num_nodes);
-        PRFBatchEval(prf_key1, data_in, &data_out[num_nodes], num_nodes);
-        PRFBatchEval(prf_key2, data_in, &data_out[num_nodes * 2], num_nodes);
+        PRFBatchEval(prf_keys->prf_key0, data_in, data_out, num_nodes);
+        PRFBatchEval(prf_keys->prf_key1, data_in, &data_out[num_nodes], num_nodes);
+        PRFBatchEval(prf_keys->prf_key2, data_in, &data_out[num_nodes * 2], num_nodes);
 
         tmp = data_out;
         data_out = data_in;
@@ -282,7 +243,7 @@ double benchmarkAES()
     }
 
     // compute AES part of output extension
-    PRFBatchEval(prf_key0, data_in, data_out, num_nodes * OUTPUTEXT);
+    PRFBatchEval(prf_keys->prf_key0, data_in, data_out, num_nodes * OUTPUTEXT);
 
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
@@ -313,10 +274,10 @@ int main(int argc, char **argv)
 
     time = 0;
     printf("******************************************\n");
-    printf("Testing Fast DPF\n");
-    testFastDPF(); // first round we throw away
+    printf("Testing Half DPF\n");
+    testHalfDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
-        time += testFastDPF();
+        time += testHalfDPF();
     printf("******************************************\n");
     printf("PASS\n");
     printf("Avg time for DPF.FullEval: %0.2f ms\n", time / testTrials);

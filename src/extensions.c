@@ -5,13 +5,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+
 #include "prf.h"
 #include "dpf.h"
 #include "utils.h"
 
 // extends the output by the provided factor using the PRG
 int ExtendOutput(
-    EVP_CIPHER_CTX *prfKey,
+    struct PRFKeys *prf_keys,
     uint128_t *output,
     uint128_t *new_output,
     const size_t output_size,
@@ -37,7 +38,7 @@ int ExtendOutput(
             new_output[i * factor + j] = output[i] ^ j;
     }
 
-    PRFBatchEval(prfKey, &new_output[0], &new_output[0], new_output_size);
+    PRFBatchEval(prf_keys->prf_key0, &new_output[0], &new_output[0], new_output_size);
 
     return 1;
 }

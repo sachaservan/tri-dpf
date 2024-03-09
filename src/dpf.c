@@ -11,9 +11,7 @@
 // - 0,1,2 refer to the branch index in the ternary tree
 
 void DPFGen(
-	EVP_CIPHER_CTX *prfKey0,
-	EVP_CIPHER_CTX *prfKey1,
-	EVP_CIPHER_CTX *prfKey2,
+	struct PRFKeys *prf_keys,
 	size_t size,
 	uint64_t index,
 	uint128_t msg,
@@ -52,13 +50,13 @@ void DPFGen(
 	for (size_t i = 0; i < size; i++)
 	{
 		// expand the starting seeds of each party
-		PRFEval(prfKey0, &parentA, &sA0);
-		PRFEval(prfKey1, &parentA, &sA1);
-		PRFEval(prfKey2, &parentA, &sA2);
+		PRFEval(prf_keys->prf_key0, &parentA, &sA0);
+		PRFEval(prf_keys->prf_key1, &parentA, &sA1);
+		PRFEval(prf_keys->prf_key2, &parentA, &sA2);
 
-		PRFEval(prfKey0, &parentB, &sB0);
-		PRFEval(prfKey1, &parentB, &sB1);
-		PRFEval(prfKey2, &parentB, &sB2);
+		PRFEval(prf_keys->prf_key0, &parentB, &sB0);
+		PRFEval(prf_keys->prf_key1, &parentB, &sB1);
+		PRFEval(prf_keys->prf_key2, &parentB, &sB2);
 
 		// on-path correction word is set to random
 		// so as to be indistinguishable from the real correction words
@@ -168,9 +166,7 @@ void DPFGen(
 // batching the evaluation points since each level of the DPF tree
 // is only expanded once.
 void DPFFullDomainEval(
-	EVP_CIPHER_CTX *prfKey0,
-	EVP_CIPHER_CTX *prfKey1,
-	EVP_CIPHER_CTX *prfKey2,
+	struct PRFKeys *prf_keys,
 	uint128_t *cache,
 	uint128_t *output,
 	const uint8_t *k,
@@ -220,9 +216,9 @@ void DPFFullDomainEval(
 		offset = 0;
 		for (batch = 0; batch < num_batches; batch++)
 		{
-			PRFBatchEval(prfKey0, &output[offset], &cache[offset], batch_size);
-			PRFBatchEval(prfKey1, &output[offset], &cache[num_nodes + offset], batch_size);
-			PRFBatchEval(prfKey2, &output[offset], &cache[(num_nodes * 2) + offset], batch_size);
+			PRFBatchEval(prf_keys->prf_key0, &output[offset], &cache[offset], batch_size);
+			PRFBatchEval(prf_keys->prf_key1, &output[offset], &cache[num_nodes + offset], batch_size);
+			PRFBatchEval(prf_keys->prf_key2, &output[offset], &cache[(num_nodes * 2) + offset], batch_size);
 
 			idx0 = offset;
 			idx1 = num_nodes + offset;

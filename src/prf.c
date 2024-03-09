@@ -6,7 +6,7 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
-EVP_CIPHER_CTX *PRFKeyGen(uint8_t *key)
+EVP_CIPHER_CTX *InitKey(uint8_t *key)
 {
     EVP_CIPHER_CTX *ctx;
 
@@ -21,7 +21,29 @@ EVP_CIPHER_CTX *PRFKeyGen(uint8_t *key)
     return ctx;
 }
 
-void DestroyPRFKey(EVP_CIPHER_CTX *ctx)
+void PRFKeyGen(struct PRFKeys *prf_keys)
 {
-    EVP_CIPHER_CTX_free(ctx);
+    uint8_t *key0 = malloc(sizeof(uint128_t));
+    uint8_t *key1 = malloc(sizeof(uint128_t));
+    uint8_t *key2 = malloc(sizeof(uint128_t));
+
+    RAND_bytes(key0, sizeof(uint128_t));
+    RAND_bytes(key1, sizeof(uint128_t));
+    RAND_bytes(key2, sizeof(uint128_t));
+
+    EVP_CIPHER_CTX *prf_key0 = InitKey(key0);
+    EVP_CIPHER_CTX *prf_key1 = InitKey(key1);
+    EVP_CIPHER_CTX *prf_key2 = InitKey(key2);
+
+    prf_keys->prf_key0 = prf_key0;
+    prf_keys->prf_key1 = prf_key1;
+    prf_keys->prf_key2 = prf_key2;
+}
+
+void DestroyPRFKey(struct PRFKeys *prf_keys)
+{
+    EVP_CIPHER_CTX_free(prf_keys->prf_key0);
+    EVP_CIPHER_CTX_free(prf_keys->prf_key1);
+    EVP_CIPHER_CTX_free(prf_keys->prf_key2);
+    free(prf_keys);
 }
