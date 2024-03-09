@@ -3,9 +3,10 @@
 A simple C implementation of Distributed Point Functions (DPFs) with several performance optimizations.
 
 Optimizations include:
+
 - Ternary instead of a binary tree (increases communication slightly but improves evaluation performance).
 - Using batched AES for fast PRF evaluation with AES-NI.
-- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\% in the ternary case. 
+- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\% in the ternary case.
 
 ## Dependencies
 
@@ -29,12 +30,11 @@ Optimizations include:
 cd src && make && ./test
 ```
 
-
 ## Possible extensions (TODOs):
-- Arbitrary output size and full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707).
-- Better code structure (use structs to store DPF keys, better management of PRF keys).
-- Serialization for DPF keys.
 
+- Arbitrary output size and full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707).
+- Better code structure (e.g., use structs to store DPF keys).
+- Serialization for DPF keys.
 
 #### Performance on M1 Macbook Pro
 
@@ -45,7 +45,7 @@ Domain of size $3^{14} \approx 2^{22}$.
 Testing DPF (without half-tree optimization)
 DPF full-domain eval time (total) 18.515000 ms
 ******************************************
-Testing Fast DPF (with half-tree optimization)
+Testing Half DPF (with half-tree optimization)
 DPF full-domain eval time (total) 16.751000 ms
 ******************************************
 ******************************************
