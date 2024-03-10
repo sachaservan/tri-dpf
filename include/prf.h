@@ -12,6 +12,7 @@ struct PRFKeys
     EVP_CIPHER_CTX *prf_key0;
     EVP_CIPHER_CTX *prf_key1;
     EVP_CIPHER_CTX *prf_key2;
+    EVP_CIPHER_CTX *prf_key_ext;
 };
 
 void PRFKeyGen(struct PRFKeys *prf_keys);

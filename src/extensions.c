@@ -14,7 +14,7 @@
 int ExtendOutput(
     struct PRFKeys *prf_keys,
     uint128_t *output,
-    uint128_t *new_output,
+    uint128_t *cache,
     const size_t output_size,
     const size_t new_output_size)
 {
@@ -35,10 +35,10 @@ int ExtendOutput(
     for (size_t i = 0; i < output_size; i++)
     {
         for (size_t j = 0; j < factor; j++)
-            new_output[i * factor + j] = output[i] ^ j;
+            cache[i * factor + j] = output[i] ^ j;
     }
 
-    PRFBatchEval(prf_keys->prf_key0, &new_output[0], &new_output[0], new_output_size);
+    PRFBatchEval(prf_keys->prf_key_ext, &cache[0], &output[0], new_output_size);
 
     return 1;
 }

@@ -12,11 +12,12 @@
 
 void DPFGen(
 	struct PRFKeys *prf_keys,
-	size_t size,
-	uint64_t index,
-	uint128_t msg,
-	unsigned char *kA,
-	unsigned char *kB)
+	size_t domain_size,
+	size_t index,
+	uint128_t *msg_blocks,
+	size_t msg_block_len,
+	struct DPFKey *k0,
+	struct DPFKey *k1)
 {
 
 	// starting seeds given to each party
@@ -25,9 +26,9 @@ void DPFGen(
 
 	// correction word provided to both parties
 	// (one correction word per level)
-	uint128_t sCW0[size];
-	uint128_t sCW1[size];
-	uint128_t sCW2[size]; // TODO: can we remove the need for the third CW?
+	uint128_t sCW0[domain_size];
+	uint128_t sCW1[domain_size];
+	uint128_t sCW2[domain_size];
 
 	// starting seeds are random
 	RAND_bytes((uint8_t *)&seedA, 16);
@@ -47,8 +48,13 @@ void DPFGen(
 	parentA = seedA;
 	parentB = seedB;
 
-	for (size_t i = 0; i < size; i++)
+	uint8_t prev_control_bit_A, prev_control_bit_B;
+
+	for (size_t i = 0; i < domain_size; i++)
 	{
+		prev_control_bit_A = get_lsb(parentA);
+		prev_control_bit_B = get_lsb(parentB);
+
 		// expand the starting seeds of each party
 		PRFEval(prf_keys->prf_key0, &parentA, &sA0);
 		PRFEval(prf_keys->prf_key1, &parentA, &sA1);
@@ -64,7 +70,7 @@ void DPFGen(
 		RAND_bytes((uint8_t *)&r, sizeof(uint128_t));
 
 		// get the current trit (ternary bit) of the special index
-		uint8_t trit = get_trit(index, size, i);
+		uint8_t trit = get_trit(index, domain_size, i);
 
 		switch (trit)
 		{
@@ -141,37 +147,82 @@ void DPFGen(
 	}
 
 	// set the last correction word to correct the output to msg
-	uint8_t last_trit = get_trit(index, size, size - 1);
+	uint128_t leaf_seedA, leaf_seedB;
+	uint8_t last_trit = get_trit(index, domain_size, domain_size - 1);
 	if (last_trit == 0)
-		sCW0[size - 1] ^= sCW0[size - 1] ^ sA0 ^ sB0 ^ msg;
+	{
+		leaf_seedA = sA0 ^ (prev_control_bit_A * sCW0[domain_size - 1]);
+		leaf_seedB = sB0 ^ (prev_control_bit_B * sCW0[domain_size - 1]);
+	}
 	else if (last_trit == 1)
-		sCW1[size - 1] ^= sCW1[size - 1] ^ sA1 ^ sB1 ^ msg;
+	{
+		leaf_seedA = sA1 ^ (prev_control_bit_A * sCW1[domain_size - 1]);
+		leaf_seedB = sB1 ^ (prev_control_bit_B * sCW1[domain_size - 1]);
+	}
+
 	else if (last_trit == 2)
-		sCW2[size - 1] ^= sCW2[size - 1] ^ sA2 ^ sB2 ^ msg;
+	{
+		leaf_seedA = sA2 ^ (prev_control_bit_A * sCW2[domain_size - 1]);
+		leaf_seedB = sB2 ^ (prev_control_bit_B * sCW2[domain_size - 1]);
+	}
+
+	uint128_t *outputA = malloc(sizeof(uint128_t) * msg_block_len);
+	uint128_t *outputB = malloc(sizeof(uint128_t) * msg_block_len);
+	uint128_t *cache = malloc(sizeof(uint128_t) * msg_block_len);
+	uint128_t *outputCW = malloc(sizeof(uint128_t) * msg_block_len);
+
+	outputA[0] = leaf_seedA;
+	outputB[0] = leaf_seedB;
+
+	ExtendOutput(prf_keys, outputA, cache, 1, msg_block_len);
+	ExtendOutput(prf_keys, outputB, cache, 1, msg_block_len);
+
+	for (size_t i = 0; i < msg_block_len; i++)
+		outputCW[i] = outputA[i] ^ outputB[i] ^ msg_blocks[i];
 
 	// memcpy all the generated values into two keys
 	// 16 = sizeof(uint128_t)
-	memcpy(&kA[0], &seedA, 16);
-	memcpy(&kA[16], &sCW0[0], size * 16);
-	memcpy(&kA[16 * size + 16], &sCW1[0], size * 16);
-	memcpy(&kA[16 * 2 * size + 16], &sCW2[0], size * 16);
+	size_t key_size = sizeof(uint128_t);			 // initial seed size;
+	key_size += 3 * domain_size * sizeof(uint128_t); // correction words
+	key_size += sizeof(uint128_t) * msg_block_len;	 // output correction word
 
-	memcpy(&kB[0], &seedB, 16);
-	memcpy(&kB[16], &sCW0[0], size * 16);
-	memcpy(&kB[16 * size + 16], &sCW1[0], size * 16);
-	memcpy(&kB[16 * 2 * size + 16], &sCW2[0], size * 16);
+	k0->prf_keys = prf_keys;
+	k0->k = malloc(key_size);
+	k0->size = domain_size;
+	k0->msg_len = msg_block_len;
+	memcpy(&k0->k[0], &seedA, 16);
+	memcpy(&k0->k[16], &sCW0[0], domain_size * 16);
+	memcpy(&k0->k[16 * domain_size + 16], &sCW1[0], domain_size * 16);
+	memcpy(&k0->k[16 * 2 * domain_size + 16], &sCW2[0], domain_size * 16);
+	memcpy(&k0->k[16 * 3 * domain_size + 16], &outputCW[0], msg_block_len * 16);
+
+	k1->prf_keys = prf_keys;
+	k1->k = malloc(key_size);
+	k1->size = domain_size;
+	k1->msg_len = msg_block_len;
+	memcpy(&k1->k[0], &seedB, 16);
+	memcpy(&k1->k[16], &sCW0[0], domain_size * 16);
+	memcpy(&k1->k[16 * domain_size + 16], &sCW1[0], domain_size * 16);
+	memcpy(&k1->k[16 * 2 * domain_size + 16], &sCW2[0], domain_size * 16);
+	memcpy(&k1->k[16 * 3 * domain_size + 16], &outputCW[0], msg_block_len * 16);
+
+	free(outputA);
+	free(outputB);
+	free(cache);
+	free(outputCW);
 }
 
 // evaluates the full DPF domain; much faster than
 // batching the evaluation points since each level of the DPF tree
 // is only expanded once.
 void DPFFullDomainEval(
-	struct PRFKeys *prf_keys,
+	struct DPFKey *key,
 	uint128_t *cache,
-	uint128_t *output,
-	const uint8_t *k,
-	const uint8_t size)
+	uint128_t *output)
 {
+	size_t size = key->size;
+	const uint8_t *k = key->k;
+	struct PRFKeys *prf_keys = key->prf_keys;
 
 	if (size % 2 == 1)
 	{
@@ -244,5 +295,24 @@ void DPFFullDomainEval(
 		cache = tmp;
 
 		num_nodes *= 3;
+	}
+
+	const size_t output_length = key->msg_len * num_leaves;
+	const size_t msg_len = key->msg_len;
+	uint128_t *outputCW = (uint128_t *)&k[16 * 3 * size + 16];
+	ExtendOutput(prf_keys, output, cache, num_leaves, output_length);
+
+	size_t j = 0;
+	for (size_t i = 0; i < num_leaves; i++)
+	{
+		// TODO: a bit hacky, assumes that cache[i*msg_len] = old_output[i]
+		// which is the case internally in ExtendOutput. It would be good
+		// to remove this assumption however using memcpy is costly...
+
+		if (cache[i * msg_len] & 1) // parent control bit
+		{
+			for (j = 0; j < msg_len; j++)
+				output[i * msg_len + j] ^= outputCW[j];
+		}
 	}
 }
