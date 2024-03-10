@@ -10,7 +10,7 @@
 #include "dpf.h"
 #include "utils.h"
 
-#define FULLEVALDOMAIN 15
+#define FULLEVALDOMAIN 14
 #define MESSAGESIZE 2
 #define MAXRANDINDEX ipow(3, FULLEVALDOMAIN)
 
@@ -121,8 +121,6 @@ double testDPF()
     //************************************************
     // Test full domain evaluation
     //************************************************
-    printf("Testing full-domain evaluation optimization\n");
-    //************************************************
 
     DPFFullDomainEval(kA, cache, shares0);
 
@@ -132,7 +130,7 @@ double testDPF()
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    printf("DPF full-domain eval time (total) %f ms\n", time_taken);
+    printf("Time %f ms\n", time_taken);
 
     // printOutputShares(shares0, shares1, num_leaves, msg_len);
 
@@ -151,8 +149,6 @@ double testDPF()
     free(shares0);
     free(shares1);
     free(cache);
-
-    printf("DONE\n\n");
 
     return time_taken;
 }
@@ -186,8 +182,6 @@ double testHalfDPF()
     //************************************************
     // Test full domain evaluation
     //************************************************
-    printf("Testing full-domain evaluation optimization\n");
-    //************************************************
 
     HalfDPFFullDomainEval(kA, cache, shares0);
 
@@ -197,7 +191,7 @@ double testHalfDPF()
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    printf("HalfDPF full-domain eval time (total) %f ms\n", time_taken);
+    printf("Time %f ms\n", time_taken);
 
     // printOutputShares(shares0, shares1, num_leaves, msg_len);
 
@@ -216,8 +210,6 @@ double testHalfDPF()
     free(cache);
     free(shares0);
     free(shares1);
-
-    printf("DONE\n\n");
 
     return time_taken;
 }
@@ -242,6 +234,8 @@ double benchmarkGen()
     DPFGen(prf_keys, size, secret_index, &secret_msg, msg_len, kA, kB);
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
+
+    printf("Time %f ms\n", time_taken);
 
     DestroyPRFKey(prf_keys);
     free(kA);
@@ -296,7 +290,7 @@ double benchmarkAES()
     t = clock() - t;
     double time_taken = ((double)t) / (CLOCKS_PER_SEC / 1000.0); // ms
 
-    printf("AES: time (total) %f ms\n", time_taken);
+    printf("Time %f ms\n", time_taken);
     free(data_in);
     free(data_out);
     free(data_tmp);
@@ -317,18 +311,18 @@ int main(int argc, char **argv)
         time += testDPF();
     printf("******************************************\n");
     printf("PASS\n");
-    printf("Avg time for DPF.FullEval: %0.2f ms\n", time / testTrials);
+    printf("DPF.FullEval: (avg time) %0.2f ms\n", time / testTrials);
     printf("******************************************\n\n");
 
     time = 0;
     printf("******************************************\n");
-    printf("Testing Half DPF\n");
+    printf("Testing HalfDPF.FullEval\n");
     testHalfDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
         time += testHalfDPF();
     printf("******************************************\n");
     printf("PASS\n");
-    printf("Avg time for HalfDPF.FullEval: %0.2f ms\n", time / testTrials);
+    printf("HalfDPF.FullEval: (avg time) %0.2f ms\n", time / testTrials);
     printf("******************************************\n\n");
 
     time = 0;
