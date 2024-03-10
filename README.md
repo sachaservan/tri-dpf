@@ -24,7 +24,7 @@ Optimizations include:
 | `sudo apt install libssl-dev`          | `sudo yum install openssl-devel`            |
 | `sudo apt install clang`               | `sudo yum install clang`                    |
 
-### Running tests and benchmarks
+## Running tests and benchmarks
 
 ```
 make
