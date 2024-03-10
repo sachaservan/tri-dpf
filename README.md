@@ -27,13 +27,13 @@ Optimizations include:
 ### Running tests and benchmarks
 
 ```
-cd src && make && ./test
+make
+./bin/test
 ```
 
 ## Possible extensions (TODOs):
 
 - Arbitrary output size and full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707).
-- Better code structure (e.g., use structs to store DPF keys).
 - Serialization for DPF keys.
 
 
