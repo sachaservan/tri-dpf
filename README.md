@@ -10,7 +10,7 @@ Optimizations include:
 
 ## Dependencies
 
-- OpenSSL 1.1.1f
+- OpenSSL
 - GNU Make
 - Cmake
 - Clang
@@ -35,6 +35,46 @@ cd src && make && ./test
 - Arbitrary output size and full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707).
 - Better code structure (e.g., use structs to store DPF keys).
 - Serialization for DPF keys.
+
+
+## Minimal example
+```c
+size_t domain_size = 10;
+size_t num_leaves = ipow(3, domain_size); // domain of size 3^10
+
+size_t secret_index = 5;
+uint128_t secret_msg = 1;
+
+// common PRF keys
+struct PRFKeys *prf_keys = malloc(sizeof(struct PRFKeys));
+PRFKeyGen(prf_keys);
+
+// DPF keys for each party
+struct DPFKey *kA = malloc(sizeof(struct DPFKey));
+struct DPFKey *kB = malloc(sizeof(struct DPFKey));
+
+DPFGen(prf_keys, domain_size, secret_index, &secret_msg, 1, kA, kB);
+
+uint128_t *shares0 = malloc(sizeof(uint128_t) * num_leaves);
+uint128_t *shares1 = malloc(sizeof(uint128_t) * num_leaves);
+
+// cache is used to speed up evaluations when running many
+// DPF evaluations sequentially
+uint128_t *cache = malloc(sizeof(uint128_t) * num_leaves);
+
+// evaluate the DPF using the key of party A
+DPFFullDomainEval(kA, cache, shares0);
+
+// evaluate the DPF using the key of party B
+DPFFullDomainEval(kB, cache, shares1);
+
+DestroyPRFKey(prf_keys);
+free(kA);
+free(kB);
+free(shares0);
+free(shares1);
+free(cache);
+```
 
 #### Performance on M1 Macbook Pro
 
