@@ -6,7 +6,7 @@ Optimizations include:
 
 - Ternary instead of a binary tree (increases communication slightly but improves evaluation performance).
 - Using batched AES for fast PRF evaluation with AES-NI.
-- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\% in the ternary case.
+- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\%-4\% in the ternary case.
 
 ## Dependencies
 
@@ -78,19 +78,21 @@ free(cache);
 
 #### Performance on M1 Macbook Pro
 
-Domain of size $3^{14} \approx 2^{22}$.
+Domain of size $3^{14} \approx 2^{22}$ and message size of 256 bits.
 
 ```
 ******************************************
-Testing DPF (without half-tree optimization)
-DPF full-domain eval time (total) 18.515000 ms
+Testing DPF.FullEval
 ******************************************
-Testing Half DPF (with half-tree optimization)
-DPF full-domain eval time (total) 16.751000 ms
+PASS
+Avg time for DPF.FullEval: 68.29 ms
 ******************************************
+
 ******************************************
-Benchmarking AES
-AES: time (total) 13.485000 ms
+Testing HalfDPF.FullEval
+******************************************
+PASS
+Avg time for HalfDPF.FullEval: 65.38 ms
 ******************************************
 ```
 
