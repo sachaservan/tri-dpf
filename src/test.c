@@ -306,9 +306,11 @@ int main(int argc, char **argv)
 
     printf("******************************************\n");
     printf("Testing DPF.FullEval\n");
-    testDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
+    {
         time += testDPF();
+        printf("Done with trial %i of %i\n", i + 1, testTrials);
+    }
     printf("******************************************\n");
     printf("PASS\n");
     printf("DPF.FullEval: (avg time) %0.2f ms\n", time / testTrials);
@@ -317,9 +319,11 @@ int main(int argc, char **argv)
     time = 0;
     printf("******************************************\n");
     printf("Testing HalfDPF.FullEval\n");
-    testHalfDPF(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
+    {
         time += testHalfDPF();
+        printf("Done with trial %i of %i\n", i + 1, testTrials);
+    }
     printf("******************************************\n");
     printf("PASS\n");
     printf("HalfDPF.FullEval: (avg time) %0.2f ms\n", time / testTrials);
@@ -328,22 +332,24 @@ int main(int argc, char **argv)
     time = 0;
     printf("******************************************\n");
     printf("Benchmarking DPF.Gen\n");
-    benchmarkGen(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
+    {
         time += benchmarkGen();
+        printf("Done with trial %i of %i\n", i + 1, testTrials);
+    }
     printf("******************************************\n");
-    printf("PASS\n");
     printf("Avg time: %0.4f ms\n", time / testTrials);
     printf("******************************************\n\n");
 
     time = 0;
     printf("******************************************\n");
     printf("Benchmarking AES\n");
-    benchmarkAES(); // first round we throw away
     for (int i = 0; i < testTrials; i++)
+    {
         time += benchmarkAES();
+        printf("Done with trial %i of %i\n", i + 1, testTrials);
+    }
     printf("******************************************\n");
-    printf("PASS\n");
     printf("Avg time: %0.2f ms\n", time / testTrials);
     printf("******************************************\n\n");
 }
