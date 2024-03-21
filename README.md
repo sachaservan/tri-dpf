@@ -4,9 +4,9 @@ A simple C implementation of Distributed Point Functions (DPFs) with several per
 
 Optimizations include:
 
-- Ternary instead of a binary tree (increases communication slightly but improves evaluation performance).
+- Ternary instead of a binary tree (increases communication slightly but improves evaluation performance by having a flatter tree).
 - Using batched AES for fast PRF evaluation with AES-NI.
-- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\%-4\% in the ternary case.
+- The half-tree optimization of [Guo et al.](https://eprint.iacr.org/2022/1431.pdf), however, this only improves performance by 2\%-4\% in the ternary-tree case.
 
 ## Dependencies
 
@@ -36,8 +36,8 @@ make
 - Arbitrary output size and full domain evaluation optimization of [Boyle et al.](https://eprint.iacr.org/2018/707).
 - Serialization for DPF keys.
 
-
 ## Minimal example
+
 ```c
 size_t domain_size = 10;
 size_t num_leaves = ipow(3, domain_size); // domain of size 3^10
@@ -94,6 +94,20 @@ Testing HalfDPF.FullEval
 PASS
 Avg time for HalfDPF.FullEval: 65.38 ms
 ******************************************
+```
+
+## Citation
+
+```
+@misc{foleage,
+      author = {Maxime Bombar and Dung Bui and Geoffroy Couteau and Alain Couvreur and Clément Ducros and Sacha Servan-Schreiber},
+      title = {FOLEAGE: $\mathbb{F}_4$OLE-Based Multi-Party Computation for Boolean Circuits},
+      howpublished = {Cryptology ePrint Archive, Paper 2024/429},
+      year = {2024},
+      note = {\url{https://eprint.iacr.org/2024/429}},
+      url = {https://eprint.iacr.org/2024/429}
+}
+
 ```
 
 ## ⚠️ Important Warning
