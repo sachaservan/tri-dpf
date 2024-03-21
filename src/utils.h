@@ -44,10 +44,12 @@ static void printBytes(void *p, int num)
     printf("\n");
 }
 
+// Compute base^exp without the floating-point precision
+// errors of the built-in pow function.
 static inline int ipow(int base, int exp)
 {
     int result = 1;
-    for (;;)
+    while (1)
     {
         if (exp & 1)
             result *= base;
